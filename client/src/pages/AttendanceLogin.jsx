@@ -1,5 +1,8 @@
 import { useState } from "react";
-import { attendanceLogin } from "../services/api";
+import {
+    attendanceLogin,
+    validateAttendanceLocation,
+} from "../services/api";
 
 function AttendanceLogin() {
     const [phone, setPhone] = useState("");
@@ -9,6 +12,11 @@ function AttendanceLogin() {
     const [nextAction, setNextAction] = useState("");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
+    const [locationLoading, setLocationLoading] =
+        useState(false);
+
+    const [locationStatus, setLocationStatus] =
+        useState(null);
 
     const handleSubmit = async (event) => {
         event.preventDefault();
@@ -40,6 +48,78 @@ function AttendanceLogin() {
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleContinueAttendance = () => {
+        setError("");
+        setLocationStatus(null);
+
+        if (!navigator.geolocation) {
+            setError(
+                "Location service is not supported on this device."
+            );
+            return;
+        }
+
+        setLocationLoading(true);
+
+        navigator.geolocation.getCurrentPosition(
+            async (position) => {
+                try {
+                    const latitude =
+                        position.coords.latitude;
+
+                    const longitude =
+                        position.coords.longitude;
+
+                    const data =
+                        await validateAttendanceLocation(
+                            attendanceToken,
+                            latitude,
+                            longitude
+                        );
+
+                    setLocationStatus({
+                        valid: true,
+                        message: data.message,
+                        distanceMeters:
+                            data.distanceMeters,
+                    });
+                } catch (error) {
+                    setError(error.message);
+                } finally {
+                    setLocationLoading(false);
+                }
+            },
+
+            (geoError) => {
+                setLocationLoading(false);
+
+                if (geoError.code === 1) {
+                    setError(
+                        "Location permission denied. Please allow location access to mark attendance."
+                    );
+                } else if (geoError.code === 2) {
+                    setError(
+                        "Your current location could not be detected."
+                    );
+                } else if (geoError.code === 3) {
+                    setError(
+                        "Location request timed out. Please try again."
+                    );
+                } else {
+                    setError(
+                        "Unable to access your location."
+                    );
+                }
+            },
+
+            {
+                enableHighAccuracy: true,
+                timeout: 15000,
+                maximumAge: 0,
+            }
+        );
     };
 
     const handleCancel = () => {
@@ -113,8 +193,12 @@ function AttendanceLogin() {
                             <button
                                 className="primary-btn"
                                 type="button"
+                                onClick={handleContinueAttendance}
+                                disabled={locationLoading}
                             >
-                                Continue to Check In
+                                {locationLoading
+                                    ? "Verifying Location..."
+                                    : "Continue to Check In"}
                             </button>
                         )}
 
@@ -122,9 +206,30 @@ function AttendanceLogin() {
                             <button
                                 className="primary-btn"
                                 type="button"
+                                onClick={handleContinueAttendance}
+                                disabled={locationLoading}
                             >
-                                Continue to Check Out
+                                {locationLoading
+                                    ? "Verifying Location..."
+                                    : "Continue to Check Out"}
                             </button>
+                        )}
+
+                        {locationStatus?.valid && (
+                            <div className="location-success">
+                                <strong>Location Verified</strong>
+
+                                <span>
+                                    You are {locationStatus.distanceMeters}m
+                                    from the attendance point.
+                                </span>
+                            </div>
+                        )}
+
+                        {error && (
+                            <p className="error-message">
+                                {error}
+                            </p>
                         )}
 
                         {nextAction === "COMPLETED" && (

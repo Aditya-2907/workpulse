@@ -291,3 +291,23 @@ form label {
     padding-top: 34px;
   }
 }
+
+.location-success {
+  margin-top: 16px;
+  padding: 14px;
+  border-radius: 12px;
+  background: #edfdf3;
+  color: #276749;
+  text-align: left;
+}
+
+.location-success strong {
+  display: block;
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.location-success span {
+  font-size: 12px;
+  line-height: 1.5;
+}
