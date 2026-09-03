@@ -1,0 +1,631 @@
+const db = require("../config/db");
+
+const createEmployee = async (req, res) => {
+    try {
+        const {
+            employeeCode,
+            fullName,
+            phone,
+            email,
+            branchId,
+            departmentId,
+            designation,
+            address,
+            pincode,
+            qualification,
+            computerSkill,
+            aadhaarNumber,
+            panNumber,
+            dutyStartTime,
+            dutyEndTime,
+            joiningDate,
+        } = req.body;
+
+        if (
+            !employeeCode ||
+            !fullName ||
+            !phone ||
+            !departmentId ||
+            !designation ||
+            !aadhaarNumber ||
+            !dutyStartTime ||
+            !dutyEndTime ||
+            !joiningDate
+        ) {
+            return res.status(400).json({
+                success: false,
+                message: "Required employee fields are missing",
+            });
+        }
+
+        let finalBranchId;
+
+        if (req.user.role === "ADMIN") {
+            finalBranchId = req.user.branchId;
+        } else {
+            if (!branchId) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Branch is required",
+                });
+            }
+
+            finalBranchId = branchId;
+        }
+
+        const [branch] = await db.query(
+            `SELECT id
+       FROM branches
+       WHERE id = ?
+       AND status = 'ACTIVE'
+       LIMIT 1`,
+            [finalBranchId]
+        );
+
+        if (branch.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid or inactive branch",
+            });
+        }
+
+        const [department] = await db.query(
+            `SELECT id
+       FROM departments
+       WHERE id = ?
+       AND status = 'ACTIVE'
+       LIMIT 1`,
+            [departmentId]
+        );
+
+        if (department.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid or inactive department",
+            });
+        }
+
+        const [existingUser] = await db.query(
+            `SELECT id
+       FROM users
+       WHERE employee_code = ?
+          OR phone = ?
+          OR (? IS NOT NULL AND email = ?)
+          OR aadhaar_number = ?
+       LIMIT 1`,
+            [
+                employeeCode,
+                phone,
+                email || null,
+                email || null,
+                aadhaarNumber,
+            ]
+        );
+
+        if (existingUser.length > 0) {
+            return res.status(409).json({
+                success: false,
+                message:
+                    "Employee code, phone, email or Aadhaar already exists",
+            });
+        }
+
+        const [result] = await db.query(
+            `INSERT INTO users (
+        employee_code,
+        full_name,
+        phone,
+        email,
+        password_hash,
+        role,
+        account_status,
+        branch_id,
+        department_id,
+        designation,
+        address,
+        pincode,
+        qualification,
+        computer_skill,
+        aadhaar_number,
+        pan_number,
+        duty_start_time,
+        duty_end_time,
+        joining_date,
+        created_by
+      )
+      VALUES (
+        ?, ?, ?, ?, NULL,
+        'EMPLOYEE',
+        'ACTIVE',
+        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+      )`,
+            [
+                employeeCode,
+                fullName,
+                phone,
+                email || null,
+                finalBranchId,
+                departmentId,
+                designation,
+                address || null,
+                pincode || null,
+                qualification || null,
+                Boolean(computerSkill),
+                aadhaarNumber,
+                panNumber || null,
+                dutyStartTime,
+                dutyEndTime,
+                joiningDate,
+                req.user.id,
+            ]
+        );
+
+        return res.status(201).json({
+            success: true,
+            message: "Employee created successfully",
+            employeeId: result.insertId,
+        });
+    } catch (error) {
+        console.error("Create employee error:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error",
+        });
+    }
+};
+
+const getEmployees = async (req, res) => {
+    try {
+        let query = `
+      SELECT
+        u.id,
+        u.employee_code AS employeeCode,
+        u.full_name AS fullName,
+        u.phone,
+        u.email,
+        u.designation,
+        u.account_status AS accountStatus,
+        u.duty_start_time AS dutyStartTime,
+        u.duty_end_time AS dutyEndTime,
+        u.joining_date AS joiningDate,
+        u.leaving_date AS leavingDate,
+
+        b.id AS branchId,
+        b.branch_name AS branchName,
+
+        d.id AS departmentId,
+        d.department_name AS departmentName,
+
+        u.created_at AS createdAt
+
+      FROM users u
+
+      LEFT JOIN branches b
+        ON b.id = u.branch_id
+
+      LEFT JOIN departments d
+        ON d.id = u.department_id
+
+      WHERE u.role = 'EMPLOYEE'
+    `;
+
+        const params = [];
+
+        if (req.user.role === "ADMIN") {
+            query += ` AND u.branch_id = ?`;
+            params.push(req.user.branchId);
+        }
+
+        query += ` ORDER BY u.id DESC`;
+
+        const [employees] = await db.query(query, params);
+
+        return res.status(200).json({
+            success: true,
+            employees,
+        });
+    } catch (error) {
+        console.error("Get employees error:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error",
+        });
+    }
+};
+
+const getEmployeeById = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        let query = `
+      SELECT
+        u.id,
+        u.employee_code AS employeeCode,
+        u.full_name AS fullName,
+        u.phone,
+        u.email,
+        u.designation,
+        u.address,
+        u.pincode,
+        u.qualification,
+        u.computer_skill AS computerSkill,
+
+        CONCAT(
+          'XXXX XXXX ',
+          RIGHT(u.aadhaar_number, 4)
+        ) AS aadhaarNumber,
+
+        u.pan_number AS panNumber,
+
+        u.duty_start_time AS dutyStartTime,
+        u.duty_end_time AS dutyEndTime,
+
+        u.joining_date AS joiningDate,
+        u.leaving_date AS leavingDate,
+
+        u.account_status AS accountStatus,
+
+        b.id AS branchId,
+        b.branch_name AS branchName,
+
+        d.id AS departmentId,
+        d.department_name AS departmentName
+
+      FROM users u
+
+      LEFT JOIN branches b
+        ON b.id = u.branch_id
+
+      LEFT JOIN departments d
+        ON d.id = u.department_id
+
+      WHERE u.id = ?
+      AND u.role = 'EMPLOYEE'
+    `;
+
+        const params = [id];
+
+        if (req.user.role === "ADMIN") {
+            query += ` AND u.branch_id = ?`;
+            params.push(req.user.branchId);
+        }
+
+        query += ` LIMIT 1`;
+
+        const [employees] = await db.query(query, params);
+
+        if (employees.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: "Employee not found or access denied",
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            employee: employees[0],
+        });
+    } catch (error) {
+        console.error("Get employee error:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error",
+        });
+    }
+};
+
+const updateEmployeeStatus = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body;
+
+        if (!["ACTIVE", "INACTIVE"].includes(status)) {
+            return res.status(400).json({
+                success: false,
+                message: "Status must be ACTIVE or INACTIVE",
+            });
+        }
+
+        let query = `
+      SELECT id
+      FROM users
+      WHERE id = ?
+      AND role = 'EMPLOYEE'
+    `;
+
+        const params = [id];
+
+        if (req.user.role === "ADMIN") {
+            query += ` AND branch_id = ?`;
+            params.push(req.user.branchId);
+        }
+
+        query += ` LIMIT 1`;
+
+        const [employees] = await db.query(query, params);
+
+        if (employees.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: "Employee not found or access denied",
+            });
+        }
+
+        await db.query(
+            `UPDATE users
+       SET
+         account_status = ?,
+         leaving_date =
+           CASE
+             WHEN ? = 'INACTIVE'
+             THEN COALESCE(leaving_date, CURDATE())
+             ELSE NULL
+           END
+       WHERE id = ?`,
+            [status, status, id]
+        );
+
+        return res.status(200).json({
+            success: true,
+            message: `Employee marked as ${status}`,
+        });
+    } catch (error) {
+        console.error("Update employee status error:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error",
+        });
+    }
+};
+
+const updateEmployee = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const {
+            fullName,
+            phone,
+            email,
+            departmentId,
+            designation,
+            address,
+            pincode,
+            qualification,
+            computerSkill,
+            aadhaarNumber,
+            panNumber,
+            dutyStartTime,
+            dutyEndTime,
+            joiningDate,
+        } = req.body;
+
+        let employeeQuery = `
+      SELECT id, branch_id
+      FROM users
+      WHERE id = ?
+      AND role = 'EMPLOYEE'
+    `;
+
+        const employeeParams = [id];
+
+        if (req.user.role === "ADMIN") {
+            employeeQuery += ` AND branch_id = ?`;
+            employeeParams.push(req.user.branchId);
+        }
+
+        employeeQuery += ` LIMIT 1`;
+
+        const [employees] = await db.query(
+            employeeQuery,
+            employeeParams
+        );
+
+        if (employees.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: "Employee not found or access denied",
+            });
+        }
+
+        if (
+            !fullName ||
+            !phone ||
+            !departmentId ||
+            !designation ||
+            !aadhaarNumber ||
+            !dutyStartTime ||
+            !dutyEndTime ||
+            !joiningDate
+        ) {
+            return res.status(400).json({
+                success: false,
+                message: "Required employee fields are missing",
+            });
+        }
+
+        const [department] = await db.query(
+            `SELECT id
+       FROM departments
+       WHERE id = ?
+       AND status = 'ACTIVE'
+       LIMIT 1`,
+            [departmentId]
+        );
+
+        if (department.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid or inactive department",
+            });
+        }
+
+        const [duplicate] = await db.query(
+            `SELECT id
+       FROM users
+       WHERE id <> ?
+       AND (
+         phone = ?
+         OR (? IS NOT NULL AND email = ?)
+         OR aadhaar_number = ?
+       )
+       LIMIT 1`,
+            [
+                id,
+                phone,
+                email || null,
+                email || null,
+                aadhaarNumber,
+            ]
+        );
+
+        if (duplicate.length > 0) {
+            return res.status(409).json({
+                success: false,
+                message:
+                    "Phone, email or Aadhaar already exists",
+            });
+        }
+
+        await db.query(
+            `UPDATE users
+       SET
+         full_name = ?,
+         phone = ?,
+         email = ?,
+         department_id = ?,
+         designation = ?,
+         address = ?,
+         pincode = ?,
+         qualification = ?,
+         computer_skill = ?,
+         aadhaar_number = ?,
+         pan_number = ?,
+         duty_start_time = ?,
+         duty_end_time = ?,
+         joining_date = ?
+       WHERE id = ?
+       AND role = 'EMPLOYEE'`,
+            [
+                fullName,
+                phone,
+                email || null,
+                departmentId,
+                designation,
+                address || null,
+                pincode || null,
+                qualification || null,
+                Boolean(computerSkill),
+                aadhaarNumber,
+                panNumber || null,
+                dutyStartTime,
+                dutyEndTime,
+                joiningDate,
+                id,
+            ]
+        );
+
+        return res.status(200).json({
+            success: true,
+            message: "Employee updated successfully",
+        });
+    } catch (error) {
+        console.error("Update employee error:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error",
+        });
+    }
+};
+
+const transferEmployeeBranch = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { branchId } = req.body;
+
+        if (!branchId) {
+            return res.status(400).json({
+                success: false,
+                message: "New branch is required",
+            });
+        }
+
+        const [employees] = await db.query(
+            `SELECT id, branch_id
+       FROM users
+       WHERE id = ?
+       AND role = 'EMPLOYEE'
+       LIMIT 1`,
+            [id]
+        );
+
+        if (employees.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: "Employee not found",
+            });
+        }
+
+        const [branches] = await db.query(
+            `SELECT id
+       FROM branches
+       WHERE id = ?
+       AND status = 'ACTIVE'
+       LIMIT 1`,
+            [branchId]
+        );
+
+        if (branches.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid or inactive branch",
+            });
+        }
+
+        if (
+            Number(employees[0].branch_id) ===
+            Number(branchId)
+        ) {
+            return res.status(400).json({
+                success: false,
+                message: "Employee is already assigned to this branch",
+            });
+        }
+
+        await db.query(
+            `UPDATE users
+       SET branch_id = ?
+       WHERE id = ?
+       AND role = 'EMPLOYEE'`,
+            [branchId, id]
+        );
+
+        return res.status(200).json({
+            success: true,
+            message: "Employee transferred successfully",
+        });
+    } catch (error) {
+        console.error(
+            "Employee branch transfer error:",
+            error
+        );
+
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error",
+        });
+    }
+};
+
+module.exports = {
+    createEmployee,
+    getEmployees,
+    getEmployeeById,
+    updateEmployee,
+    updateEmployeeStatus,
+    transferEmployeeBranch,
+};

@@ -1,0 +1,293 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  font-family:
+    Inter,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+
+  color: #152033;
+  background: #f4f7fb;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+.attendance-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background:
+    linear-gradient(180deg,
+      #eef4ff 0%,
+      #f7f9fc 55%,
+      #ffffff 100%);
+}
+
+.attendance-card {
+  width: 100%;
+  max-width: 430px;
+  background: #ffffff;
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow:
+    0 16px 45px rgba(26, 47, 83, 0.12);
+}
+
+.brand-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 24px;
+  border-bottom: 1px solid #edf0f5;
+}
+
+.brand-logo {
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #2563eb;
+  color: white;
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.brand-section h1 {
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+.brand-section p {
+  margin-top: 3px;
+  color: #718096;
+  font-size: 13px;
+}
+
+.login-section,
+.employee-section {
+  padding: 28px 24px 30px;
+}
+
+.login-section h2 {
+  font-size: 24px;
+  line-height: 1.25;
+  margin-bottom: 8px;
+}
+
+.description {
+  color: #718096;
+  line-height: 1.6;
+  font-size: 14px;
+  margin-bottom: 26px;
+}
+
+form label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #354052;
+}
+
+.phone-input-wrapper {
+  display: flex;
+  align-items: center;
+  min-height: 54px;
+  border: 1px solid #d8dee9;
+  border-radius: 13px;
+  overflow: hidden;
+  background: white;
+}
+
+.phone-input-wrapper:focus-within {
+  border-color: #2563eb;
+  box-shadow:
+    0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.phone-input-wrapper span {
+  padding: 0 14px;
+  color: #4a5568;
+  border-right: 1px solid #e2e8f0;
+  font-weight: 600;
+}
+
+.phone-input-wrapper input {
+  flex: 1;
+  min-width: 0;
+  height: 52px;
+  border: 0;
+  outline: 0;
+  padding: 0 14px;
+  font-size: 17px;
+  letter-spacing: 1px;
+}
+
+.primary-btn {
+  width: 100%;
+  min-height: 52px;
+  border: 0;
+  border-radius: 13px;
+  background: #2563eb;
+  color: #ffffff;
+  font-weight: 700;
+  margin-top: 18px;
+  transition:
+    transform 0.15s ease,
+    opacity 0.15s ease;
+}
+
+.primary-btn:hover {
+  transform: translateY(-1px);
+}
+
+.primary-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.secondary-btn {
+  width: 100%;
+  min-height: 48px;
+  border-radius: 13px;
+  background: transparent;
+  border: 1px solid #d8dee9;
+  color: #4a5568;
+  margin-top: 12px;
+  font-weight: 600;
+}
+
+.error-message {
+  margin-top: 10px;
+  color: #c53030;
+  font-size: 13px;
+}
+
+.security-note {
+  margin-top: 24px;
+  padding: 13px 14px;
+  border-radius: 12px;
+  background: #f7f9fc;
+  color: #718096;
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.employee-section {
+  text-align: center;
+}
+
+.avatar {
+  width: 76px;
+  height: 76px;
+  margin: 0 auto 14px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #e8f0ff;
+  color: #2563eb;
+  font-size: 30px;
+  font-weight: 800;
+}
+
+.employee-section h2 {
+  font-size: 23px;
+}
+
+.employee-code {
+  color: #718096;
+  font-size: 13px;
+  margin-top: 5px;
+}
+
+.employee-info {
+  margin-top: 24px;
+  border: 1px solid #edf0f5;
+  border-radius: 16px;
+  overflow: hidden;
+  text-align: left;
+}
+
+.employee-info>div {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 14px 15px;
+  border-bottom: 1px solid #edf0f5;
+}
+
+.employee-info>div:last-child {
+  border-bottom: 0;
+}
+
+.employee-info span {
+  color: #718096;
+  font-size: 13px;
+}
+
+.employee-info strong {
+  max-width: 62%;
+  text-align: right;
+  font-size: 13px;
+  color: #27364d;
+}
+
+.completed-message {
+  margin-top: 20px;
+  padding: 14px;
+  border-radius: 12px;
+  background: #edfdf3;
+  color: #276749;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+@media (max-width: 480px) {
+  .attendance-page {
+    padding: 0;
+    align-items: stretch;
+    background: #ffffff;
+  }
+
+  .attendance-card {
+    max-width: none;
+    min-height: 100vh;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .brand-section {
+    padding-top: 28px;
+  }
+
+  .login-section,
+  .employee-section {
+    padding-top: 34px;
+  }
+}
