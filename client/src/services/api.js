@@ -1,4 +1,6 @@
-const API_BASE_URL = "http://localhost:5000/api";
+const API_BASE_URL =
+    import.meta.env.VITE_API_BASE_URL ||
+    "http://localhost:5000/api";
 
 export const attendanceLogin = async (phone) => {
     const response = await fetch(
@@ -48,6 +50,88 @@ export const validateAttendanceLocation = async (
     if (!response.ok) {
         throw new Error(
             data.message || "Location verification failed"
+        );
+    }
+
+    return data;
+};
+
+export const submitCheckIn = async ({
+    attendanceToken,
+    latitude,
+    longitude,
+    remarks,
+    photoBlob,
+}) => {
+    const formData = new FormData();
+
+    formData.append("latitude", latitude);
+    formData.append("longitude", longitude);
+    formData.append("remarks", remarks || "");
+    formData.append(
+        "photo",
+        photoBlob,
+        `check-in-${Date.now()}.jpg`
+    );
+
+    const response = await fetch(
+        `${API_BASE_URL}/attendance/check-in`,
+        {
+            method: "POST",
+            headers: {
+                Authorization: `Bearer ${attendanceToken}`,
+            },
+            body: formData,
+        }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+        throw new Error(
+            data.message || "Check-in failed"
+        );
+    }
+
+    return data;
+};
+
+export const submitCheckOut = async ({
+    attendanceToken,
+    latitude,
+    longitude,
+    remarks,
+    photoBlob,
+}) => {
+    const formData = new FormData();
+
+    formData.append("latitude", latitude);
+    formData.append("longitude", longitude);
+    formData.append("remarks", remarks || "");
+
+    formData.append(
+        "photo",
+        photoBlob,
+        `check-out-${Date.now()}.jpg`
+    );
+
+    const response = await fetch(
+        `${API_BASE_URL}/attendance/check-out`,
+        {
+            method: "POST",
+            headers: {
+                Authorization:
+                    `Bearer ${attendanceToken}`,
+            },
+            body: formData,
+        }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+        throw new Error(
+            data.message || "Check-out failed"
         );
     }
 

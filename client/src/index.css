@@ -311,3 +311,52 @@ form label {
   font-size: 12px;
   line-height: 1.5;
 }
+
+.camera-section {
+  width: 100%;
+  margin-top: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.camera-section h3 {
+  margin: 0;
+  font-size: 16px;
+  text-align: left;
+}
+
+.camera-preview,
+.captured-photo {
+  display: block;
+  width: 100%;
+  border-radius: 14px;
+  object-fit: cover;
+  background: #111;
+}
+
+.camera-preview {
+  min-height: 280px;
+  max-height: 420px;
+}
+
+.captured-photo {
+  max-height: 420px;
+}
+
+.remarks-input {
+  width: 100%;
+  box-sizing: border-box;
+  resize: vertical;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  padding: 12px;
+  font-family: inherit;
+  font-size: 14px;
+}
+
+.camera-section label {
+  text-align: left;
+  font-size: 13px;
+  font-weight: 600;
+}
