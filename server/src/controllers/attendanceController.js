@@ -170,6 +170,156 @@ const attendanceLogin = async (req, res) => {
     }
 };
 
+const calculateDistance = (
+    lat1,
+    lon1,
+    lat2,
+    lon2
+) => {
+    const earthRadius = 6371000;
+
+    const toRadians = (degree) =>
+        (degree * Math.PI) / 180;
+
+    const dLat = toRadians(lat2 - lat1);
+    const dLon = toRadians(lon2 - lon1);
+
+    const a =
+        Math.sin(dLat / 2) *
+        Math.sin(dLat / 2) +
+        Math.cos(toRadians(lat1)) *
+        Math.cos(toRadians(lat2)) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+
+    const c =
+        2 *
+        Math.atan2(
+            Math.sqrt(a),
+            Math.sqrt(1 - a)
+        );
+
+    return earthRadius * c;
+};
+
+const validateLocation = async (req, res) => {
+    try {
+        const { latitude, longitude } = req.body;
+
+        if (
+            latitude === undefined ||
+            longitude === undefined
+        ) {
+            return res.status(400).json({
+                success: false,
+                message: "Current GPS location is required",
+            });
+        }
+
+        const currentLatitude = Number(latitude);
+        const currentLongitude = Number(longitude);
+
+        if (
+            !Number.isFinite(currentLatitude) ||
+            !Number.isFinite(currentLongitude) ||
+            currentLatitude < -90 ||
+            currentLatitude > 90 ||
+            currentLongitude < -180 ||
+            currentLongitude > 180
+        ) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid GPS coordinates",
+            });
+        }
+
+        const user = req.attendanceUser;
+
+        const [branches] = await db.query(
+            `SELECT
+        id,
+        branch_name AS branchName,
+        latitude,
+        longitude,
+        status
+       FROM branches
+       WHERE id = ?
+       LIMIT 1`,
+            [user.branchId]
+        );
+
+        if (branches.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: "Assigned branch not found",
+            });
+        }
+
+        const branch = branches[0];
+
+        if (branch.status !== "ACTIVE") {
+            return res.status(403).json({
+                success: false,
+                message: "Assigned branch is inactive",
+            });
+        }
+
+        if (
+            branch.latitude === null ||
+            branch.longitude === null
+        ) {
+            return res.status(400).json({
+                success: false,
+                message:
+                    "Branch GPS location is not configured",
+            });
+        }
+
+        const distance = calculateDistance(
+            currentLatitude,
+            currentLongitude,
+            Number(branch.latitude),
+            Number(branch.longitude)
+        );
+
+        const roundedDistance =
+            Math.round(distance * 100) / 100;
+
+        const allowedRadius = 50;
+
+        if (distance > allowedRadius) {
+            return res.status(403).json({
+                success: false,
+                locationValid: false,
+                message:
+                    "You are outside the allowed attendance area",
+                distanceMeters: roundedDistance,
+                allowedRadiusMeters: allowedRadius,
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            locationValid: true,
+            message: "Location verified successfully",
+            distanceMeters: roundedDistance,
+            allowedRadiusMeters: allowedRadius,
+            branchName: branch.branchName,
+        });
+    } catch (error) {
+        console.error(
+            "Attendance location validation error:",
+            error
+        );
+
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error",
+        });
+    }
+};
+
 module.exports = {
     attendanceLogin,
+    validateLocation,
 };
