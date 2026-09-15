@@ -35,11 +35,6 @@ router.put("/:id", updateEmployee);
 router.patch("/:id/status", updateEmployeeStatus);
 
 router.patch(
-    "/:id/status",
-    updateEmployeeStatus
-);
-
-router.patch(
     "/:id/transfer-branch",
     allowRoles("SUPER_ADMIN"),
     transferEmployeeBranch

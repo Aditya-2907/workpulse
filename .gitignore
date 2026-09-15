@@ -37,3 +37,7 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.temp
+# Local maintenance / temporary files
+server/resetPassword.js
+server/resetSuperAdminPassword.js
+workpulse_schema.txt

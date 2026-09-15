@@ -62,6 +62,8 @@ CREATE TABLE IF NOT EXISTS users (
 
     password_hash VARCHAR(255) NULL,
 
+    token_version INT UNSIGNED NOT NULL DEFAULT 0,
+
     role ENUM(
         'EMPLOYEE',
         'ADMIN',

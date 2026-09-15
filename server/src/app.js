@@ -8,10 +8,17 @@ const departmentRoutes = require("./routes/departmentRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 const employeeRoutes = require("./routes/employeeRoutes");
 const attendanceRoutes = require("./routes/attendanceRoutes");
+const dashboardRoutes = require("./routes/dashboardRoutes");
+const adminApprovalRoutes = require("./routes/adminApprovalRoutes");
+const leaveRoutes = require("./routes/leaveRoutes");
+const holidayRoutes = require("./routes/holidayRoutes");
+const reportRoutes = require("./routes/reportRoutes");
 
 const app = express();
 
-app.use(cors());
+app.use(cors({
+    exposedHeaders: ["Content-Disposition"],
+}));
 app.use(express.json());
 
 app.get("/", (req, res) => {
@@ -34,5 +41,15 @@ app.use("/api/admins", adminRoutes);
 app.use("/api/employees", employeeRoutes);
 
 app.use("/api/attendance", attendanceRoutes);
+
+app.use("/api/admin-approvals", adminApprovalRoutes);
+
+app.use("/api/dashboard", dashboardRoutes);
+
+app.use("/api/leaves", leaveRoutes);
+
+app.use("/api/holidays", holidayRoutes);
+
+app.use("/api/reports", reportRoutes);
 
 module.exports = app;

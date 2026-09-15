@@ -18,15 +18,56 @@ const {
 
 const router = express.Router();
 
-router.use(
+/*
+|--------------------------------------------------------------------------
+| Department List
+|--------------------------------------------------------------------------
+| SUPER_ADMIN and ADMIN can view departments.
+| ADMIN needs this list while assigning an employee/admin.
+|--------------------------------------------------------------------------
+*/
+
+router.get(
+    "/",
     authenticate,
-    allowRoles("SUPER_ADMIN")
+    allowRoles("SUPER_ADMIN", "ADMIN"),
+    getDepartments
 );
 
-router.post("/", createDepartment);
-router.get("/", getDepartments);
-router.get("/:id", getDepartmentById);
-router.put("/:id", updateDepartment);
-router.patch("/:id/status", updateDepartmentStatus);
+/*
+|--------------------------------------------------------------------------
+| Super Admin Only
+|--------------------------------------------------------------------------
+| Only SUPER_ADMIN can create, edit, or change department status.
+|--------------------------------------------------------------------------
+*/
+
+router.post(
+    "/",
+    authenticate,
+    allowRoles("SUPER_ADMIN"),
+    createDepartment
+);
+
+router.get(
+    "/:id",
+    authenticate,
+    allowRoles("SUPER_ADMIN"),
+    getDepartmentById
+);
+
+router.put(
+    "/:id",
+    authenticate,
+    allowRoles("SUPER_ADMIN"),
+    updateDepartment
+);
+
+router.patch(
+    "/:id/status",
+    authenticate,
+    allowRoles("SUPER_ADMIN"),
+    updateDepartmentStatus
+);
 
 module.exports = router;

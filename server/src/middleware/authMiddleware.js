@@ -24,7 +24,8 @@ const authenticate = async (req, res, next) => {
           email,
           role,
           account_status,
-          branch_id
+          branch_id,
+          token_version
        FROM users
        WHERE id = ?
        LIMIT 1`,
@@ -44,6 +45,13 @@ const authenticate = async (req, res, next) => {
             return res.status(403).json({
                 success: false,
                 message: "Your account is not active",
+            });
+        }
+
+        if (decoded.tokenVersion !== user.token_version) {
+            return res.status(401).json({
+                success: false,
+                message: "Session is no longer valid. Please log in again.",
             });
         }
 
