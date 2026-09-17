@@ -1,5 +1,28 @@
 const jwt = require("jsonwebtoken");
+const fs = require("fs/promises");
 const db = require("../config/db");
+
+const {
+    uploadAttendancePhoto,
+    deleteAttendancePhoto,
+} = require("../services/attendancePhotoService");
+
+const removeLocalAttendancePhoto = async (filePath) => {
+    if (!filePath) {
+        return;
+    }
+
+    try {
+        await fs.unlink(filePath);
+    } catch (error) {
+        if (error.code !== "ENOENT") {
+            console.error(
+                "Failed to remove temporary attendance photo:",
+                error
+            );
+        }
+    }
+};
 
 const attendanceLogin = async (req, res) => {
     try {
@@ -596,63 +619,89 @@ const checkIn = async (req, res) => {
         const isLate =
             Boolean(durationRows[0].isLate);
 
-        const photoPath =
-            `uploads/attendance/${req.file.filename}`;
+        let uploadedPhoto = null;
 
-        if (existingRecords.length === 0) {
-            await db.query(
-                `INSERT INTO attendance_records (
-          user_id,
-          branch_id,
-          attendance_date,
-          check_in_time,
-          check_in_photo_path,
-          check_in_latitude,
-          check_in_longitude,
-          check_in_distance_meters,
-          check_in_remarks,
-          required_minutes,
-          is_late,
-          attendance_status
-        )
-        VALUES (?, ?, CURDATE(), NOW(), ?, ?, ?, ?, ?, ?, ?, 'PENDING')`,
-                [
-                    user.id,
-                    user.branchId,
-                    photoPath,
-                    currentLatitude,
-                    currentLongitude,
-                    roundedDistance,
-                    remarks || null,
-                    requiredMinutes,
-                    isLate ? 1 : 0,
-                ]
-            );
-        } else {
-            await db.query(
-                `UPDATE attendance_records
-         SET
-           check_in_time = NOW(),
-           check_in_photo_path = ?,
-           check_in_latitude = ?,
-           check_in_longitude = ?,
-           check_in_distance_meters = ?,
-           check_in_remarks = ?,
-           required_minutes = ?,
-           is_late = ?,
-           attendance_status = 'PENDING'
-         WHERE id = ?`,
-                [
-                    photoPath,
-                    currentLatitude,
-                    currentLongitude,
-                    roundedDistance,
-                    remarks || null,
-                    requiredMinutes,
-                    isLate ? 1 : 0,
-                    existingRecords[0].id,
-                ]
-            );
+        try {
+            uploadedPhoto =
+                await uploadAttendancePhoto(req.file.path);
+        } finally {
+            await removeLocalAttendancePhoto(req.file.path);
+        }
+
+        const photoPath = uploadedPhoto.url;
+        const photoPublicId = uploadedPhoto.publicId;
+
+        try {
+            if (existingRecords.length === 0) {
+                await db.query(
+                    `INSERT INTO attendance_records (
+              user_id,
+              branch_id,
+              attendance_date,
+              check_in_time,
+              check_in_photo_path,
+              check_in_photo_public_id,
+              check_in_latitude,
+              check_in_longitude,
+              check_in_distance_meters,
+              check_in_remarks,
+              required_minutes,
+              is_late,
+              attendance_status
+            )
+            VALUES (?, ?, CURDATE(), NOW(), ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING')`,
+                    [
+                        user.id,
+                        user.branchId,
+                        photoPath,
+                        photoPublicId,
+                        currentLatitude,
+                        currentLongitude,
+                        roundedDistance,
+                        remarks || null,
+                        requiredMinutes,
+                        isLate ? 1 : 0,
+                    ]
+                );
+            } else {
+                await db.query(
+                    `UPDATE attendance_records
+             SET
+               check_in_time = NOW(),
+               check_in_photo_path = ?,
+               check_in_photo_public_id = ?,
+               check_in_latitude = ?,
+               check_in_longitude = ?,
+               check_in_distance_meters = ?,
+               check_in_remarks = ?,
+               required_minutes = ?,
+               is_late = ?,
+               attendance_status = 'PENDING'
+             WHERE id = ?`,
+                    [
+                        photoPath,
+                        photoPublicId,
+                        currentLatitude,
+                        currentLongitude,
+                        roundedDistance,
+                        remarks || null,
+                        requiredMinutes,
+                        isLate ? 1 : 0,
+                        existingRecords[0].id,
+                    ]
+                );
+            }
+        } catch (error) {
+            try {
+                await deleteAttendancePhoto(photoPublicId);
+            } catch (cleanupError) {
+                console.error(
+                    "Failed to rollback Cloudinary check-in photo:",
+                    cleanupError
+                );
+            }
+
+            throw error;
         }
 
         return res.status(201).json({
@@ -672,6 +721,10 @@ const checkIn = async (req, res) => {
             success: false,
             message: "Internal server error",
         });
+    } finally {
+        if (req.file?.path) {
+            await removeLocalAttendancePhoto(req.file.path);
+        }
     }
 };
 
@@ -886,36 +939,60 @@ const checkOut = async (req, res) => {
                 "INSUFFICIENT_ATTENDANCE";
         }
 
-        const photoPath =
-            `uploads/attendance/${req.file.filename}`;
+        let uploadedPhoto = null;
 
-        await db.query(
-            `UPDATE attendance_records
-             SET
-                check_out_time = NOW(),
-                check_out_photo_path = ?,
-                check_out_latitude = ?,
-                check_out_longitude = ?,
-                check_out_distance_meters = ?,
-                check_out_remarks = ?,
-                worked_minutes = ?,
-                attendance_percentage = ?,
-                is_early_departure = ?,
-                attendance_status = ?
-             WHERE id = ?`,
-            [
-                photoPath,
-                currentLatitude,
-                currentLongitude,
-                roundedDistance,
-                remarks || null,
-                workedMinutes,
-                attendancePercentage,
-                isEarlyDeparture ? 1 : 0,
-                attendanceStatus,
-                record.id,
-            ]
-        );
+        try {
+            uploadedPhoto =
+                await uploadAttendancePhoto(req.file.path);
+        } finally {
+            await removeLocalAttendancePhoto(req.file.path);
+        }
+
+        const photoPath = uploadedPhoto.url;
+        const photoPublicId = uploadedPhoto.publicId;
+
+        try {
+            await db.query(
+                `UPDATE attendance_records
+         SET
+            check_out_time = NOW(),
+            check_out_photo_path = ?,
+            check_out_photo_public_id = ?,
+            check_out_latitude = ?,
+            check_out_longitude = ?,
+            check_out_distance_meters = ?,
+            check_out_remarks = ?,
+            worked_minutes = ?,
+            attendance_percentage = ?,
+            is_early_departure = ?,
+            attendance_status = ?
+         WHERE id = ?`,
+                [
+                    photoPath,
+                    photoPublicId,
+                    currentLatitude,
+                    currentLongitude,
+                    roundedDistance,
+                    remarks || null,
+                    workedMinutes,
+                    attendancePercentage,
+                    isEarlyDeparture ? 1 : 0,
+                    attendanceStatus,
+                    record.id,
+                ]
+            );
+        } catch (error) {
+            try {
+                await deleteAttendancePhoto(photoPublicId);
+            } catch (cleanupError) {
+                console.error(
+                    "Failed to rollback Cloudinary check-out photo:",
+                    cleanupError
+                );
+            }
+
+            throw error;
+        }
 
         return res.status(200).json({
             success: true,
@@ -940,6 +1017,10 @@ const checkOut = async (req, res) => {
             success: false,
             message: "Internal server error",
         });
+    } finally {
+        if (req.file?.path) {
+            await removeLocalAttendancePhoto(req.file.path);
+        }
     }
 };
 
