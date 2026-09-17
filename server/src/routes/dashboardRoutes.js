@@ -2,6 +2,7 @@ const express = require("express");
 
 const {
     getSuperAdminDashboard,
+    getAdminDashboard,
 } = require("../controllers/dashboardController");
 
 const {
@@ -19,6 +20,13 @@ router.get(
     authenticate,
     allowRoles("SUPER_ADMIN"),
     getSuperAdminDashboard
+);
+
+router.get(
+    "/admin",
+    authenticate,
+    allowRoles("ADMIN"),
+    getAdminDashboard
 );
 
 module.exports = router;

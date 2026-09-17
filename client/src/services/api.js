@@ -214,6 +214,30 @@ export const getSuperAdminDashboard = async () => {
     return data;
 };
 
+export const getAdminDashboard = async () => {
+    const token = sessionStorage.getItem("managementToken");
+
+    const response = await fetch(
+        `${API_BASE_URL}/dashboard/admin`,
+        {
+            method: "GET",
+            headers: {
+                Authorization: `Bearer ${token}`,
+            },
+        }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+        throw new Error(
+            data.message || "Failed to load admin dashboard"
+        );
+    }
+
+    return data;
+};
+
 export const getBranches = async () => {
     const token = sessionStorage.getItem("managementToken");
 
