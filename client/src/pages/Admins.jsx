@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import ManagementLayout from "../components/management/ManagementLayout";
 
 import {
@@ -16,6 +16,8 @@ import {
 
 const initialForm = {
     fullName: "",
+    dateOfBirth: "",
+    gender: "",
     phone: "",
     email: "",
     password: "",
@@ -31,6 +33,14 @@ const initialForm = {
     dutyStartTime: "",
     dutyEndTime: "",
     joiningDate: "",
+};
+
+const initialApprovalAssignment = {
+    branchId: "",
+    departmentId: "",
+    designation: "",
+    joiningDate: "",
+    temporaryPassword: "",
 };
 
 const Admins = () => {
@@ -69,6 +79,10 @@ const Admins = () => {
     });
     const [resetPasswordError, setResetPasswordError] = useState("");
     const [resettingPassword, setResettingPassword] = useState(false);
+    const [approvalTarget, setApprovalTarget] = useState(null);
+    const [approvalAssignment, setApprovalAssignment] = useState(initialApprovalAssignment);
+    const [approvalError, setApprovalError] = useState("");
+    const [adminSearch, setAdminSearch] = useState("");
 
     const loadData = async () => {
         try {
@@ -167,6 +181,12 @@ const Admins = () => {
                 fullName:
                     formData.fullName.trim(),
 
+                dateOfBirth:
+                    formData.dateOfBirth || null,
+
+                gender:
+                    formData.gender || null,
+
                 phone:
                     formData.phone.trim(),
 
@@ -260,6 +280,14 @@ const Admins = () => {
             setFormData({
                 fullName:
                     details.fullName || "",
+
+                dateOfBirth:
+                    details.dateOfBirth
+                        ? String(details.dateOfBirth).slice(0, 10)
+                        : "",
+
+                gender:
+                    details.gender || "",
 
                 phone:
                     details.phone || "",
@@ -372,54 +400,77 @@ const Admins = () => {
         request,
         action
     ) => {
-        const actionText =
-            action === "APPROVE"
-                ? "approve"
-                : "reject";
-
-        const confirmed =
-            window.confirm(
-                `Are you sure you want to ${actionText} ${request.fullName}?`
-            );
-
-        if (!confirmed) return;
-
-        let reviewNote = "";
-
-        if (action === "REJECT") {
-            reviewNote =
-                window.prompt(
-                    "Enter rejection reason (optional):"
-                ) || "";
+        if (action === "APPROVE") {
+            setApprovalError("");
+            setApprovalTarget(request);
+            setApprovalAssignment({
+                branchId: request.branchId ? String(request.branchId) : "",
+                departmentId: request.departmentId ? String(request.departmentId) : "",
+                designation: request.designation || "",
+                joiningDate: request.joiningDate ? String(request.joiningDate).slice(0, 10) : "",
+                temporaryPassword: "",
+            });
+            return;
         }
 
+        if (!window.confirm(`Are you sure you want to reject ${request.fullName}?`)) return;
+        const reviewNote = window.prompt("Enter rejection reason (optional):") || "";
         try {
-            setReviewingRequestId(
-                request.id
-            );
-
-            await reviewAdminApprovalRequest(
-                request.id,
-                action,
-                reviewNote
-            );
-
-            alert(
-                action === "APPROVE"
-                    ? "Admin approved successfully"
-                    : "Admin rejected successfully"
-            );
-
+            setReviewingRequestId(request.id);
+            await reviewAdminApprovalRequest(request.id, "REJECT", reviewNote);
+            alert("Admin rejected successfully");
             await loadData();
         } catch (err) {
-            alert(
-                err.message ||
-                "Failed to review admin request"
-            );
+            alert(err.message || "Failed to review admin request");
         } finally {
-            setReviewingRequestId(
-                null
+            setReviewingRequestId(null);
+        }
+    };
+
+    const closeApprovalForm = () => {
+        setApprovalTarget(null);
+        setApprovalAssignment(initialApprovalAssignment);
+        setApprovalError("");
+    };
+
+    const handleApprovalAssignmentChange = (event) => {
+        const { name, value } = event.target;
+        setApprovalAssignment((current) => ({ ...current, [name]: value }));
+    };
+
+    const submitApproval = async (event) => {
+        event.preventDefault();
+        setApprovalError("");
+        if (!approvalTarget) return;
+        if (!approvalAssignment.branchId || !approvalAssignment.departmentId || !approvalAssignment.designation.trim() || !approvalAssignment.joiningDate) {
+            setApprovalError("Branch, department, designation and joining date are required.");
+            return;
+        }
+        if (approvalAssignment.temporaryPassword.length < 8) {
+            setApprovalError("Set a temporary password with at least 8 characters.");
+            return;
+        }
+        try {
+            setReviewingRequestId(approvalTarget.id);
+            await reviewAdminApprovalRequest(
+                approvalTarget.id,
+                "APPROVE",
+                "",
+                approvalAssignment.temporaryPassword,
+                {
+                    branchId: Number(approvalAssignment.branchId),
+                    departmentId: Number(approvalAssignment.departmentId),
+                    designation: approvalAssignment.designation.trim(),
+                    joiningDate: approvalAssignment.joiningDate,
+                }
             );
+            alert("Admin approved. They must change the temporary password at first sign-in.");
+            closeApprovalForm();
+            await loadData();
+        } catch (err) {
+            setApprovalError(err.message || "Failed to approve admin request.");
+        } finally {
+            setReviewingRequestId(null);
         }
     };
 
@@ -479,6 +530,24 @@ const Admins = () => {
             (request) =>
                 request.status === "PENDING"
         );
+
+    const filteredAdmins = useMemo(() => {
+        const search = adminSearch.trim().toLowerCase();
+
+        if (!search) {
+            return admins;
+        }
+
+        return admins.filter((admin) => (
+            [
+                admin.fullName,
+                admin.employeeCode,
+                admin.phone,
+                admin.email,
+                admin.branchName,
+            ].some((value) => String(value || "").toLowerCase().includes(search))
+        ));
+    }, [adminSearch, admins]);
 
     const getStatusClassName = (
         status
@@ -547,6 +616,11 @@ const Admins = () => {
                         }
                     >
 
+                        <div className="management-form-section full-width">
+                            <h4>Personal information</h4>
+                            <p>Contact details and basic identity information.</p>
+                        </div>
+
                         <div className="management-form-group">
                             <label>
                                 Full Name *
@@ -562,6 +636,22 @@ const Admins = () => {
                                 }
                                 required
                             />
+                        </div>
+
+                        <div className="management-form-group">
+                            <label>Date of Birth</label>
+                            <input type="date" name="dateOfBirth" value={formData.dateOfBirth} onChange={handleChange} />
+                        </div>
+
+                        <div className="management-form-group">
+                            <label>Gender</label>
+                            <select name="gender" value={formData.gender} onChange={handleChange}>
+                                <option value="">Prefer not to say</option>
+                                <option value="FEMALE">Female</option>
+                                <option value="MALE">Male</option>
+                                <option value="NON_BINARY">Non-binary</option>
+                                <option value="PREFER_NOT_TO_SAY">Prefer not to say</option>
+                            </select>
                         </div>
 
                         <div className="management-form-group">
@@ -601,7 +691,7 @@ const Admins = () => {
                         {!editingAdmin && (
                             <div className="management-form-group">
                                 <label>
-                                    Management Password *
+                                    Temporary Password *
                                 </label>
 
                                 <input
@@ -616,8 +706,14 @@ const Admins = () => {
                                     minLength="8"
                                     required
                                 />
+                                <small>The Admin will be required to replace this password at first sign-in.</small>
                             </div>
                         )}
+
+                        <div className="management-form-section full-width">
+                            <h4>Employment information</h4>
+                            <p>Branch assignment, department, and scheduled working hours.</p>
+                        </div>
 
                         <div className="management-form-group">
                             <label>
@@ -747,6 +843,11 @@ const Admins = () => {
                             />
                         </div>
 
+                        <div className="management-form-section full-width">
+                            <h4>Qualification &amp; skills</h4>
+                            <p>Optional education and computer-skill details.</p>
+                        </div>
+
                         <div className="management-form-group">
                             <label>
                                 Qualification
@@ -761,6 +862,11 @@ const Admins = () => {
                                     handleChange
                                 }
                             />
+                        </div>
+
+                        <div className="management-form-section full-width">
+                            <h4>Identity information</h4>
+                            <p>Identity values are protected and only changed when a new value is supplied.</p>
                         </div>
 
                         <div className="management-form-group">
@@ -889,7 +995,7 @@ const Admins = () => {
                                 Computer Skill
                             </label>
 
-                            <label>
+                            <label className="management-checkbox-row">
                                 <input
                                     type="checkbox"
                                     name="computerSkill"
@@ -901,7 +1007,7 @@ const Admins = () => {
                                     }
                                 />
 
-                                {" "}Yes
+                                Has computer skills
                             </label>
                         </div>
 
@@ -948,10 +1054,10 @@ const Admins = () => {
                     >
                         <div className="dashboard-panel-header">
                             <div>
-                                <h3 id="reset-password-title">Reset Password</h3>
+                                <h3 id="reset-password-title">Set Temporary Password</h3>
                                 <p>
-                                    Reset the password for {resettingAdmin.fullName}.
-                                    Existing passwords cannot be viewed. You can securely reset the Admin&apos;s password.
+                                    Set a temporary password for {resettingAdmin.fullName}.
+                                    Existing passwords cannot be viewed; this Admin must replace it at next sign-in.
                                 </p>
                             </div>
                         </div>
@@ -992,9 +1098,26 @@ const Admins = () => {
                                     Cancel
                                 </button>
                                 <button type="submit" className="primary-action-btn" disabled={resettingPassword}>
-                                    {resettingPassword ? "Resetting..." : "Reset Password"}
+                                    {resettingPassword ? "Saving..." : "Set Temporary Password"}
                                 </button>
                             </div>
+                        </form>
+                    </section>
+                </div>
+            )}
+
+            {approvalTarget && (
+                <div className="management-modal-backdrop" role="presentation">
+                    <section className="management-password-modal" role="dialog" aria-modal="true" aria-labelledby="approval-assignment-title">
+                        <div className="dashboard-panel-header"><div><h3 id="approval-assignment-title">Approve {approvalTarget.fullName}</h3><p>Assign organization access and set a temporary password. The candidate must replace it at first sign-in.</p></div></div>
+                        <form className="management-password-form" onSubmit={submitApproval}>
+                            <label>Branch *<select name="branchId" value={approvalAssignment.branchId} onChange={handleApprovalAssignmentChange} required><option value="">Select branch</option>{branches.map((branch) => <option key={branch.id} value={branch.id}>{branch.branchName}</option>)}</select></label>
+                            <label>Department *<select name="departmentId" value={approvalAssignment.departmentId} onChange={handleApprovalAssignmentChange} required><option value="">Select department</option>{departments.map((department) => <option key={department.id} value={department.id}>{department.departmentName}</option>)}</select></label>
+                            <label>Designation *<input name="designation" value={approvalAssignment.designation} onChange={handleApprovalAssignmentChange} required /></label>
+                            <label>Joining Date *<input type="date" name="joiningDate" value={approvalAssignment.joiningDate} onChange={handleApprovalAssignmentChange} required /></label>
+                            <label>Temporary Password *<input type="password" name="temporaryPassword" value={approvalAssignment.temporaryPassword} onChange={handleApprovalAssignmentChange} autoComplete="new-password" minLength="8" required /></label>
+                            {approvalError && <p className="management-form-error" role="alert">{approvalError}</p>}
+                            <div className="management-form-actions"><button type="button" className="secondary-action-btn" onClick={closeApprovalForm} disabled={Boolean(reviewingRequestId)}>Cancel</button><button type="submit" className="primary-action-btn" disabled={Boolean(reviewingRequestId)}>{reviewingRequestId ? "Approving…" : "Approve Admin"}</button></div>
                         </form>
                     </section>
                 </div>
@@ -1014,6 +1137,7 @@ const Admins = () => {
                             administrators.
                         </p>
                     </div>
+
                 </div>
 
                 {loading ? (
@@ -1178,7 +1302,7 @@ const Admins = () => {
 
             <section className="dashboard-panel">
 
-                <div className="dashboard-panel-header">
+                <div className="dashboard-panel-header admin-list-header">
                     <div>
                         <h3>
                             Registered Admins
@@ -1188,6 +1312,28 @@ const Admins = () => {
                             Branch administrators
                             configured in WorkPulse.
                         </p>
+                    </div>
+
+                    <div className="admin-list-controls">
+                        <label className="admin-search-control" htmlFor="admin-search">
+                            <span>Search admins</span>
+                            <input
+                                id="admin-search"
+                                type="search"
+                                value={adminSearch}
+                                onChange={(event) => setAdminSearch(event.target.value)}
+                                placeholder="Search by name, code, phone, email or branch"
+                            />
+                        </label>
+                        {adminSearch && (
+                            <button
+                                type="button"
+                                className="management-secondary-button admin-search-clear"
+                                onClick={() => setAdminSearch("")}
+                            >
+                                Clear
+                            </button>
+                        )}
                     </div>
                 </div>
 
@@ -1199,6 +1345,17 @@ const Admins = () => {
                     <p>
                         No admins found.
                     </p>
+                ) : filteredAdmins.length === 0 ? (
+                    <div className="management-empty-state admin-search-empty" role="status">
+                        <strong>No admins found matching your search.</strong>
+                        <button
+                            type="button"
+                            className="management-secondary-button"
+                            onClick={() => setAdminSearch("")}
+                        >
+                            Clear search
+                        </button>
+                    </div>
                 ) : (
                     <div className="management-table-wrapper">
 
@@ -1245,7 +1402,7 @@ const Admins = () => {
                             </thead>
 
                             <tbody>
-                                {admins.map(
+                                {filteredAdmins.map(
                                     (admin) => (
                                         <tr
                                             key={

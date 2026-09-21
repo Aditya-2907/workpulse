@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import ManagementLayout from "../components/management/ManagementLayout";
 import { getAdminDashboard } from "../services/api";
+import DashboardDrilldown from "../components/management/DashboardDrilldown";
+import DashboardCharts from "../components/management/DashboardCharts";
 
 function AdminDashboard() {
     const navigate = useNavigate();
@@ -123,136 +125,22 @@ function AdminDashboard() {
                             </span>
                         </div>
 
-                        <div className="dashboard-stat-card">
-                            <div className="stat-card-top">
-                                <span className="stat-icon">
-                                    ✓
-                                </span>
+                        <DashboardDrilldown type="PRESENT" count={attendance.present} icon="✓" description="Employees checked in today" />
 
-                                <span className="stat-badge">
-                                    Today
-                                </span>
-                            </div>
+                        <DashboardDrilldown type="LATE" count={attendance.late} icon="◷" description="Late arrivals in your branch" />
 
-                            <p>Present Today</p>
+                        <DashboardDrilldown type="LEAVE" count={attendance.leave} icon="○" description="Employees on approved leave" />
 
-                            <h3>
-                                {totals.presentToday}
-                            </h3>
-
-                            <span className="stat-description">
-                                Employees checked in today
-                            </span>
-                        </div>
-
-                        <div className="dashboard-stat-card">
-                            <div className="stat-card-top">
-                                <span className="stat-icon">
-                                    ◷
-                                </span>
-
-                                <span className="stat-badge">
-                                    Today
-                                </span>
-                            </div>
-
-                            <p>Late Today</p>
-
-                            <h3>
-                                {attendance.late}
-                            </h3>
-
-                            <span className="stat-description">
-                                Late arrivals in your branch
-                            </span>
-                        </div>
-
-                        <div className="dashboard-stat-card">
-                            <div className="stat-card-top">
-                                <span className="stat-icon">
-                                    ○
-                                </span>
-
-                                <span className="stat-badge">
-                                    Today
-                                </span>
-                            </div>
-
-                            <p>On Leave</p>
-
-                            <h3>
-                                {attendance.leave}
-                            </h3>
-
-                            <span className="stat-description">
-                                Employees on approved leave
-                            </span>
-                        </div>
+                        <DashboardDrilldown type="ABSENT" count={attendance.absent} icon="−" description="Employees absent today" />
                     </section>
 
-                    <section className="dashboard-grid">
-                        <div className="dashboard-panel">
-                            <div className="dashboard-panel-header">
-                                <div>
-                                    <h3>
-                                        Today's Attendance
-                                    </h3>
+                    <DashboardCharts
+                        attendance={attendance}
+                        analytics={dashboardData?.analytics}
+                        totalEmployees={totals.employees}
+                    />
 
-                                    <p>
-                                        Attendance summary for{" "}
-                                        {branch?.name ||
-                                            "your branch"}
-                                    </p>
-                                </div>
-                            </div>
-
-                            <div className="attendance-summary-list">
-                                <div className="attendance-summary-item">
-                                    <div>
-                                        <span className="summary-dot"></span>
-                                        Present
-                                    </div>
-
-                                    <strong>
-                                        {attendance.present}
-                                    </strong>
-                                </div>
-
-                                <div className="attendance-summary-item">
-                                    <div>
-                                        <span className="summary-dot"></span>
-                                        Late
-                                    </div>
-
-                                    <strong>
-                                        {attendance.late}
-                                    </strong>
-                                </div>
-
-                                <div className="attendance-summary-item">
-                                    <div>
-                                        <span className="summary-dot"></span>
-                                        Leave
-                                    </div>
-
-                                    <strong>
-                                        {attendance.leave}
-                                    </strong>
-                                </div>
-
-                                <div className="attendance-summary-item">
-                                    <div>
-                                        <span className="summary-dot"></span>
-                                        Absent
-                                    </div>
-
-                                    <strong>
-                                        {attendance.absent}
-                                    </strong>
-                                </div>
-                            </div>
-                        </div>
-
+                    <section className="dashboard-grid dashboard-quick-actions-only">
                         <div className="dashboard-panel">
                             <div className="dashboard-panel-header">
                                 <div>

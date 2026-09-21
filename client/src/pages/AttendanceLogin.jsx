@@ -1,12 +1,15 @@
 import { useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
     attendanceLogin,
     validateAttendanceLocation,
     submitCheckIn,
     submitCheckOut,
 } from "../services/api";
+import WorkPulseLogo from "../components/WorkPulseLogo";
 
 function AttendanceLogin() {
+    const navigate = useNavigate();
     const [phone, setPhone] = useState("");
     const [employeeData, setEmployeeData] = useState(null);
     const [attendanceToken, setAttendanceToken] = useState("");
@@ -414,14 +417,7 @@ function AttendanceLogin() {
             <main className="attendance-page">
                 <section className="attendance-card">
                     <div className="brand-section">
-                        <div className="brand-logo">
-                            W
-                        </div>
-
-                        <div>
-                            <h1>WorkPulse</h1>
-                            <p>Employee Attendance</p>
-                        </div>
+                        <WorkPulseLogo className="attendance-state-logo" />
                     </div>
 
                     <div className="employee-section">
@@ -687,33 +683,38 @@ function AttendanceLogin() {
     // =====================================================
 
     return (
-        <main className="attendance-page">
-            <section className="attendance-card">
-                <div className="brand-section">
-                    <div className="brand-logo">
-                        W
+        <main className="attendance-page attendance-login-page">
+            <div className="attendance-login-atmosphere" aria-hidden="true">
+                <span className="attendance-orb attendance-orb-teal" />
+                <span className="attendance-orb attendance-orb-blue" />
+                <span className="attendance-grid" />
+                <span className="attendance-ring attendance-ring-one" />
+                <span className="attendance-ring attendance-ring-two" />
+            </div>
+            <section className="attendance-login-shell" aria-label="Employee attendance access">
+                <div className="attendance-login-brand-panel">
+                    <WorkPulseLogo className="attendance-login-logo" alt="WorkPulse" />
+                    <div className="attendance-brand-copy">
+                        <p className="attendance-eyebrow">WORKPLACE ATTENDANCE</p>
+                        <h1>Simple, secure attendance access.</h1>
+                        <p>Check in or check out from your registered office attendance device.</p>
                     </div>
-
-                    <div>
-                        <h1>WorkPulse</h1>
-                        <p>Employee Attendance</p>
-                    </div>
+                    <ul className="attendance-login-benefits" aria-label="Attendance access benefits">
+                        <li><span aria-hidden="true">{"\u2713"}</span> Fast check-in and check-out</li>
+                        <li><span aria-hidden="true">{"\u2713"}</span> Secure workplace access</li>
+                        <li><span aria-hidden="true">{"\u2713"}</span> Location-aware attendance</li>
+                    </ul>
                 </div>
 
-                <div className="login-section">
-                    <h2>
-                        Mark Your Attendance
-                    </h2>
+                <section className="attendance-access-card">
+                    <div className="attendance-access-heading">
+                        <p>EMPLOYEE ATTENDANCE</p>
+                        <h2>Mark Your Attendance</h2>
+                        <span>Enter your registered mobile number to continue.</span>
+                    </div>
 
-                    <p className="description">
-                        Enter your registered mobile
-                        number to continue.
-                    </p>
-
-                    <form onSubmit={handleSubmit}>
-                        <label htmlFor="phone">
-                            Registered Mobile Number
-                        </label>
+                    <form className="attendance-login-form" onSubmit={handleSubmit}>
+                        <label htmlFor="phone">Registered Mobile Number</label>
 
                         <div className="phone-input-wrapper">
                             <span>+91</span>
@@ -738,28 +739,34 @@ function AttendanceLogin() {
                         </div>
 
                         {error && (
-                            <p className="error-message">
+                            <p className="error-message" role="alert">
                                 {error}
                             </p>
                         )}
 
                         <button
                             type="submit"
-                            className="primary-btn"
+                            className="primary-btn attendance-continue-button"
                             disabled={loading}
                         >
                             {loading
                                 ? "Checking..."
-                                : "Continue"}
+                                : <>Continue <span aria-hidden="true">{"\u2192"}</span></>}
                         </button>
                     </form>
 
-                    <div className="security-note">
-                        Use the registered office
-                        attendance device to mark
-                        attendance.
+                    <div className="security-note attendance-security-note">
+                        <span className="attendance-security-icon" aria-hidden="true">{"\u25c8"}</span>
+                        <p>Use the registered office attendance device to mark attendance.</p>
                     </div>
-                </div>
+
+                    <div className="attendance-management-access">
+                        <span>Management access?</span>
+                        <button className="attendance-management-link" type="button" onClick={() => navigate("/management/login")}>
+                            Management sign in <span aria-hidden="true">{"\u2192"}</span>
+                        </button>
+                    </div>
+                </section>
             </section>
         </main>
     );

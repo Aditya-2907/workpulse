@@ -925,13 +925,14 @@ const Leaves = () => {
                                             >
                                                 <td>
                                                     <strong>
-                                                        {leave.employeeCode ||
+                                                        {leave.fullName ||
                                                             "-"}
                                                     </strong>
 
                                                     <div className="management-table-subtext">
                                                         {
-                                                            leave.fullName
+                                                            leave.employeeCode ||
+                                                            "-"
                                                         }
                                                     </div>
                                                 </td>

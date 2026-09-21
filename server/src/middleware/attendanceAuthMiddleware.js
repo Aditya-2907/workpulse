@@ -1,5 +1,6 @@
 const jwt = require("jsonwebtoken");
 const db = require("../config/db");
+const crypto = require("crypto");
 
 const authenticateAttendance = async (req, res, next) => {
     try {
@@ -58,6 +59,22 @@ const authenticateAttendance = async (req, res, next) => {
                 success: false,
                 message: "Account is not active",
             });
+        }
+
+        // Optional by default: a Super Admin may enable this only after a
+        // registered device has been provisioned. Browser fingerprints are not used.
+        try {
+            const [[settings]] = await db.query("SELECT device_enforcement_enabled AS enabled FROM organization_settings WHERE id = 1");
+            if (settings?.enabled) {
+                const credential = String(req.headers["x-attendance-device"] || "");
+                const hash = crypto.createHash("sha256").update(credential).digest("hex");
+                const [[device]] = await db.query("SELECT id FROM attendance_devices WHERE device_token_hash = ? AND status = 'ACTIVE'", [hash]);
+                if (!credential || !device) return res.status(403).json({ success: false, code: "AUTHORIZED_DEVICE_REQUIRED", message: "An authorized attendance device is required." });
+                await db.query("UPDATE attendance_devices SET last_used_at = NOW() WHERE id = ?", [device.id]);
+            }
+        } catch (error) {
+            // Before the additive operations migration, device enforcement remains off.
+            if (error.code !== "ER_BAD_FIELD_ERROR" && error.code !== "ER_NO_SUCH_TABLE") throw error;
         }
 
         req.attendanceUser = user;

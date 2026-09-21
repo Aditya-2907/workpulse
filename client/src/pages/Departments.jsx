@@ -168,6 +168,27 @@ const Departments = () => {
                         onSubmit={handleSubmit}
                         className="management-form-grid"
                     >
+                        <div className="management-form-group">
+                            <label>Department Code</label>
+
+                            <input
+                                type="text"
+                                value={
+                                    editingDepartment
+                                        ? editingDepartment.departmentCode
+                                        : "Assigned automatically"
+                                }
+                                readOnly
+                                aria-describedby="department-code-help"
+                            />
+
+                            <small id="department-code-help">
+                                {editingDepartment
+                                    ? "Department codes are assigned automatically and cannot be changed."
+                                    : "WorkPulse will assign the next available department code when you create this department."}
+                            </small>
+                        </div>
+
                         <div className="management-form-group full-width">
                             <label>
                                 Department Name
@@ -234,7 +255,7 @@ const Departments = () => {
                         <table className="management-table">
                             <thead>
                                 <tr>
-                                    <th>ID</th>
+                                    <th>Department Code</th>
                                     <th>Department Name</th>
                                     <th>Status</th>
                                     <th>Created At</th>
@@ -251,9 +272,9 @@ const Departments = () => {
                                             }
                                         >
                                             <td>
-                                                {
-                                                    department.id
-                                                }
+                                                <strong>
+                                                    {department.departmentCode || "-"}
+                                                </strong>
                                             </td>
 
                                             <td>

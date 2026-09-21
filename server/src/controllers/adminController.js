@@ -1,6 +1,7 @@
 const bcrypt = require("bcryptjs");
 const db = require("../config/db");
 const generateEmployeeCode = require("../utils/generateEmployeeCode");
+const { writeAuditLog } = require("../services/auditService");
 
 
 // ======================================================
@@ -15,6 +16,8 @@ const createAdmin = async (req, res) => {
 
         const {
             fullName,
+            dateOfBirth,
+            gender,
             phone,
             email,
             password,
@@ -160,9 +163,12 @@ const createAdmin = async (req, res) => {
             `INSERT INTO users (
                 employee_code,
                 full_name,
+                date_of_birth,
+                gender,
                 phone,
                 email,
                 password_hash,
+                must_change_password,
                 role,
                 account_status,
                 branch_id,
@@ -180,7 +186,7 @@ const createAdmin = async (req, res) => {
                 created_by
             )
             VALUES (
-                ?, ?, ?, ?, ?,
+                ?, ?, ?, ?, ?, ?, ?, TRUE,
                 'ADMIN',
                 'ACTIVE',
                 ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
@@ -188,6 +194,8 @@ const createAdmin = async (req, res) => {
             [
                 employeeCode,
                 fullName.trim(),
+                dateOfBirth || null,
+                gender || null,
                 phone.trim(),
                 email?.trim() || null,
                 passwordHash,
@@ -207,12 +215,21 @@ const createAdmin = async (req, res) => {
             ]
         );
 
+        await writeAuditLog(connection, {
+            actorId: req.user.id,
+            action: "ADMIN_CREATED",
+            entityType: "USER",
+            entityId: result.insertId,
+            newData: { employeeCode, role: "ADMIN", branchId, departmentId, mustChangePassword: true },
+            req,
+        });
+
         await connection.commit();
 
         return res.status(201).json({
             success: true,
             message:
-                "Admin created successfully",
+                "Admin created. They must set a private password at first sign-in.",
             adminId: result.insertId,
             employeeCode,
         });
@@ -253,6 +270,8 @@ const getAdmins = async (req, res) => {
                 u.id,
                 u.employee_code AS employeeCode,
                 u.full_name AS fullName,
+                DATE_FORMAT(u.date_of_birth, '%Y-%m-%d') AS dateOfBirth,
+                u.gender AS gender,
                 u.phone,
                 u.email,
                 u.designation,
@@ -314,6 +333,8 @@ const getAdminById = async (req, res) => {
                 u.id,
                 u.employee_code AS employeeCode,
                 u.full_name AS fullName,
+                DATE_FORMAT(u.date_of_birth, '%Y-%m-%d') AS dateOfBirth,
+                u.gender,
                 u.phone,
                 u.email,
                 u.branch_id AS branchId,
@@ -382,6 +403,8 @@ const getAdminById = async (req, res) => {
                     admin.employeeCode,
                 fullName:
                     admin.fullName,
+                dateOfBirth: admin.dateOfBirth,
+                gender: admin.gender,
                 phone:
                     admin.phone,
                 email:
@@ -459,6 +482,8 @@ const updateAdmin = async (req, res) => {
 
         const {
             fullName,
+            dateOfBirth,
+            gender,
             phone,
             email,
             branchId,
@@ -625,6 +650,8 @@ const updateAdmin = async (req, res) => {
             `UPDATE users
              SET
                 full_name = ?,
+                date_of_birth = ?,
+                gender = ?,
                 phone = ?,
                 email = ?,
                 branch_id = ?,
@@ -644,6 +671,8 @@ const updateAdmin = async (req, res) => {
                AND role = 'ADMIN'`,
             [
                 fullName.trim(),
+                dateOfBirth || null,
+                gender || null,
                 phone.trim(),
                 email?.trim() || null,
                 branchId,
@@ -662,6 +691,15 @@ const updateAdmin = async (req, res) => {
                 id,
             ]
         );
+
+        await writeAuditLog(db, {
+            actorId: req.user.id,
+            action: "ADMIN_UPDATED",
+            entityType: "USER",
+            entityId: id,
+            newData: { branchId, departmentId, designation: designation.trim() },
+            req,
+        });
 
         return res.status(200).json({
             success: true,
@@ -775,6 +813,16 @@ const updateAdminStatus = async (
             ]
         );
 
+        await writeAuditLog(db, {
+            actorId: req.user.id,
+            action: "ADMIN_STATUS_CHANGED",
+            entityType: "USER",
+            entityId: id,
+            oldData: { accountStatus: currentStatus },
+            newData: { accountStatus: status },
+            req,
+        });
+
         return res.status(200).json({
             success: true,
             message:
@@ -851,15 +899,25 @@ const resetAdminPassword = async (req, res) => {
         await db.query(
             `UPDATE users
              SET password_hash = ?,
+                 must_change_password = TRUE,
                  token_version = token_version + 1
              WHERE id = ?
                AND role = 'ADMIN'`,
             [passwordHash, id]
         );
 
+        await writeAuditLog(db, {
+            actorId: req.user.id,
+            action: "ADMIN_TEMPORARY_PASSWORD_RESET",
+            entityType: "USER",
+            entityId: id,
+            newData: { mustChangePassword: true },
+            req,
+        });
+
         return res.status(200).json({
             success: true,
-            message: "Admin password reset successfully",
+            message: "Temporary password set. The Admin must change it at next sign-in.",
         });
     } catch (error) {
         console.error("Reset admin password error:", error);

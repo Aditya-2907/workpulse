@@ -16,6 +16,8 @@ import {
 
 const initialForm = {
     fullName: "",
+    dateOfBirth: "",
+    gender: "",
     phone: "",
     email: "",
     branchId: "",
@@ -52,6 +54,15 @@ function Employees() {
         useState(null);
 
     const [showForm, setShowForm] =
+        useState(false);
+
+    const [transferEmployee, setTransferEmployee] =
+        useState(null);
+
+    const [transferBranchId, setTransferBranchId] =
+        useState("");
+
+    const [transferring, setTransferring] =
         useState(false);
 
     const [loading, setLoading] =
@@ -215,6 +226,12 @@ function Employees() {
                 fullName:
                     formData.fullName.trim(),
 
+                dateOfBirth:
+                    formData.dateOfBirth || null,
+
+                gender:
+                    formData.gender || null,
+
                 phone:
                     formData.phone.trim(),
 
@@ -361,6 +378,14 @@ function Employees() {
             setFormData({
                 fullName:
                     employee.fullName || "",
+
+                dateOfBirth:
+                    employee.dateOfBirth
+                        ? String(employee.dateOfBirth).slice(0, 10)
+                        : "",
+
+                gender:
+                    employee.gender || "",
 
                 phone:
                     employee.phone || "",
@@ -532,68 +557,58 @@ function Employees() {
         }
 
 
-        const branchList =
-            availableBranches
-                .map(
-                    (branch) =>
-                        `${branch.id} - ${branch.branchName}`
-                )
-                .join("\n");
+        setTransferEmployee(employee);
+        setTransferBranchId("");
+        setError("");
+        setMessage("");
+    };
 
-
-        const selectedBranchId =
-            window.prompt(
-                `Enter new Branch ID for ${employee.fullName}:\n\n${branchList}`
-            );
-
-
-        if (!selectedBranchId) {
+    const closeTransfer = () => {
+        if (transferring) {
             return;
         }
 
+        setTransferEmployee(null);
+        setTransferBranchId("");
+    };
 
-        const selectedBranch =
-            availableBranches.find(
-                (branch) =>
-                    Number(branch.id) ===
-                    Number(
-                        selectedBranchId
-                    )
-            );
+    const confirmTransfer = async (event) => {
+        event.preventDefault();
 
+        const selectedBranch = branches.find(
+            (branch) =>
+                Number(branch.id) ===
+                Number(transferBranchId) &&
+                Number(branch.id) !==
+                Number(transferEmployee?.branchId)
+        );
 
-        if (!selectedBranch) {
-            window.alert(
-                "Invalid branch selected."
-            );
-
+        if (!transferEmployee || !selectedBranch) {
+            setError("Select a different active destination branch.");
             return;
         }
 
-
-        const confirmed =
-            window.confirm(
-                `Transfer ${employee.fullName} from ${employee.branchName} to ${selectedBranch.branchName}?`
-            );
-
+        const confirmed = window.confirm(
+            `Transfer ${transferEmployee.fullName} from ${transferEmployee.branchName} to ${selectedBranch.branchName}?`
+        );
 
         if (!confirmed) {
             return;
         }
 
-
         try {
+            setTransferring(true);
             setError("");
             setMessage("");
 
             await transferEmployeeBranch(
-                employee.id,
-                Number(selectedBranchId)
+                transferEmployee.id,
+                selectedBranch.id
             );
 
-            setMessage(
-                "Employee transferred successfully"
-            );
+            setMessage("Employee transferred successfully");
+            setTransferEmployee(null);
+            setTransferBranchId("");
 
             await loadData();
         } catch (err) {
@@ -601,6 +616,8 @@ function Employees() {
                 err.message ||
                 "Unable to transfer employee"
             );
+        } finally {
+            setTransferring(false);
         }
     };
 
@@ -698,6 +715,91 @@ function Employees() {
                 </div>
             )}
 
+            {transferEmployee && (
+                <div
+                    className="management-modal-backdrop"
+                    role="presentation"
+                >
+                    <section
+                        className="management-password-modal management-transfer-modal"
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="transfer-employee-title"
+                    >
+                        <h3 id="transfer-employee-title">
+                            Transfer Employee
+                        </h3>
+
+                        <p>
+                            Move <strong>{transferEmployee.fullName}</strong>
+                            {transferEmployee.employeeCode
+                                ? ` (${transferEmployee.employeeCode})`
+                                : ""} from <strong>{transferEmployee.branchName || "the current branch"}</strong>.
+                        </p>
+
+                        <form onSubmit={confirmTransfer}>
+                            <div className="management-form-group">
+                                <label htmlFor="transfer-destination-branch">
+                                    Destination Branch
+                                </label>
+
+                                <select
+                                    id="transfer-destination-branch"
+                                    value={transferBranchId}
+                                    onChange={(event) =>
+                                        setTransferBranchId(event.target.value)
+                                    }
+                                    required
+                                    disabled={transferring}
+                                >
+                                    <option value="">
+                                        Select destination branch
+                                    </option>
+
+                                    {branches
+                                        .filter(
+                                            (branch) =>
+                                                Number(branch.id) !==
+                                                Number(transferEmployee.branchId)
+                                        )
+                                        .map((branch) => (
+                                            <option
+                                                key={branch.id}
+                                                value={branch.id}
+                                            >
+                                                {branch.branchCode
+                                                    ? `${branch.branchCode} - ${branch.branchName}`
+                                                    : branch.branchName}
+                                            </option>
+                                        ))}
+                                </select>
+                            </div>
+
+                            <div className="management-form-actions">
+                                <button
+                                    type="button"
+                                    className="management-secondary-button"
+                                    onClick={closeTransfer}
+                                    disabled={transferring}
+                                >
+                                    Cancel
+                                </button>
+
+                                <button
+                                    type="submit"
+                                    className="management-primary-button"
+                                    disabled={transferring || !transferBranchId}
+                                >
+                                    {transferring
+                                        ? "Transferring..."
+                                        : "Confirm Transfer"}
+                                </button>
+                            </div>
+                        </form>
+                    </section>
+                </div>
+            )}
+
 
             {/* =================================================
                 ADD / EDIT EMPLOYEE FORM
@@ -752,6 +854,11 @@ function Employees() {
                         className="management-form-grid"
                     >
 
+                        <div className="management-form-section management-form-group-full">
+                            <h4>Personal information</h4>
+                            <p>Contact details and basic identity information.</p>
+                        </div>
+
                         {/* Full Name */}
 
                         <div className="management-form-group">
@@ -770,6 +877,22 @@ function Employees() {
                                 }
                                 required
                             />
+                        </div>
+
+                        <div className="management-form-group">
+                            <label>Date of Birth</label>
+                            <input type="date" name="dateOfBirth" value={formData.dateOfBirth} onChange={handleChange} />
+                        </div>
+
+                        <div className="management-form-group">
+                            <label>Gender</label>
+                            <select name="gender" value={formData.gender} onChange={handleChange}>
+                                <option value="">Prefer not to say</option>
+                                <option value="FEMALE">Female</option>
+                                <option value="MALE">Male</option>
+                                <option value="NON_BINARY">Non-binary</option>
+                                <option value="PREFER_NOT_TO_SAY">Prefer not to say</option>
+                            </select>
                         </div>
 
 
@@ -813,6 +936,11 @@ function Employees() {
                             />
                         </div>
 
+
+                        <div className="management-form-section management-form-group-full">
+                            <h4>Employment information</h4>
+                            <p>Assignment, designation, and scheduled working hours.</p>
+                        </div>
 
                         {/* Branch - only Super Admin during create */}
 
@@ -987,6 +1115,11 @@ function Employees() {
                         </div>
 
 
+                        <div className="management-form-section management-form-group-full">
+                            <h4>Qualification &amp; skills</h4>
+                            <p>Optional education and computer-skill details.</p>
+                        </div>
+
                         {/* Qualification */}
 
                         <div className="management-form-group">
@@ -1030,6 +1163,11 @@ function Employees() {
                             </label>
                         </div>
 
+
+                        <div className="management-form-section management-form-group-full">
+                            <h4>Identity information</h4>
+                            <p>Identity values are protected and only changed when a new value is supplied.</p>
+                        </div>
 
                         {/* Aadhaar */}
 

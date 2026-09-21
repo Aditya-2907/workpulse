@@ -3,6 +3,7 @@ import { Navigate } from "react-router-dom";
 function ProtectedRoute({
     children,
     allowedRoles = [],
+    allowPasswordChangeRequired = false,
 }) {
     const token = sessionStorage.getItem(
         "managementToken"
@@ -37,6 +38,18 @@ function ProtectedRoute({
         return (
             <Navigate
                 to="/management/login"
+                replace
+            />
+        );
+    }
+
+    if (
+        user.mustChangePassword &&
+        !allowPasswordChangeRequired
+    ) {
+        return (
+            <Navigate
+                to="/management/force-password-change"
                 replace
             />
         );

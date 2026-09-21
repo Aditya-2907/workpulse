@@ -41,3 +41,8 @@ Thumbs.db
 server/resetPassword.js
 server/resetSuperAdminPassword.js
 workpulse_schema.txt
+server/backups/
+backups/
+
+# Local database dumps
+*.sql

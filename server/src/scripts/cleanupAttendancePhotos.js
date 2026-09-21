@@ -4,7 +4,10 @@ const {
     deleteAttendancePhoto,
 } = require("../services/attendancePhotoService");
 
-const RETENTION_DAYS = 90;
+const configuredRetentionDays = Number.parseInt(process.env.ATTENDANCE_PHOTO_RETENTION_DAYS || "90", 10);
+let retentionDays = Number.isInteger(configuredRetentionDays) && configuredRetentionDays >= 1
+    ? configuredRetentionDays
+    : 90;
 const EXECUTE_MODE = process.argv.includes("--execute");
 
 const isSuccessfulDeleteResult = (result) => {
@@ -17,6 +20,7 @@ const isSuccessfulDeleteResult = (result) => {
 const cleanupPhoto = async ({
     recordId,
     publicId,
+    storedPath,
     photoType,
 }) => {
     const isCheckIn = photoType === "check_in";
@@ -35,14 +39,13 @@ const cleanupPhoto = async ({
 
     try {
         const result =
-            await deleteAttendancePhoto(publicId);
+            await deleteAttendancePhoto(publicId, storedPath);
 
         if (!isSuccessfulDeleteResult(result)) {
             console.error(
                 `Cloudinary did not confirm deletion for ${photoType} photo`,
                 {
                     recordId,
-                    publicId,
                     result,
                 }
             );
@@ -97,8 +100,15 @@ const runCleanup = async () => {
     let failedPhotos = 0;
 
     try {
+        try {
+            const [[settings]] = await db.query("SELECT photo_retention_days AS photoRetentionDays FROM organization_settings WHERE id = 1");
+            const settingValue = Number(settings?.photoRetentionDays);
+            if (Number.isInteger(settingValue) && settingValue >= 1) retentionDays = settingValue;
+        } catch (error) {
+            if (error.code !== "ER_BAD_FIELD_ERROR") throw error;
+        }
         console.log(
-            `Attendance photo retention cleanup (${RETENTION_DAYS} days)`
+            `Attendance photo retention cleanup (${retentionDays} days)`
         );
 
         console.log(
@@ -112,8 +122,10 @@ const runCleanup = async () => {
                 id,
                 attendance_date,
                 check_in_photo_public_id,
+                check_in_photo_path,
                 check_in_photo_deleted_at,
                 check_out_photo_public_id,
+                check_out_photo_path,
                 check_out_photo_deleted_at
              FROM attendance_records
              WHERE attendance_date < DATE_SUB(CURDATE(), INTERVAL ? DAY)
@@ -129,7 +141,7 @@ const runCleanup = async () => {
                     )
                )
              ORDER BY attendance_date ASC, id ASC`,
-            [RETENTION_DAYS]
+            [retentionDays]
         );
 
         if (rows.length === 0) {
@@ -168,6 +180,7 @@ const runCleanup = async () => {
                     recordId: row.id,
                     publicId:
                         row.check_in_photo_public_id,
+                    storedPath: row.check_in_photo_path,
                     photoType: "check_in",
                 });
 
@@ -183,6 +196,7 @@ const runCleanup = async () => {
                     recordId: row.id,
                     publicId:
                         row.check_out_photo_public_id,
+                    storedPath: row.check_out_photo_path,
                     photoType: "check_out",
                 });
 

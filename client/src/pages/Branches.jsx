@@ -21,7 +21,6 @@ const WEEKDAYS = [
 // End Aditya
 
 const initialForm = {
-    branchCode: "",
     branchName: "",
     address: "",
     pincode: "",
@@ -108,7 +107,6 @@ const Branches = () => {
         setEditingBranch(branch);
 
         setFormData({
-            branchCode: branch.branchCode || "",
             branchName: branch.branchName || "",
             address: branch.address || "",
             pincode: branch.pincode || "",
@@ -144,9 +142,6 @@ const Branches = () => {
             setSaving(true);
 
             const payload = {
-                branchCode:
-                    formData.branchCode.trim(),
-
                 branchName:
                     formData.branchName.trim(),
 
@@ -272,13 +267,20 @@ const Branches = () => {
 
                             <input
                                 type="text"
-                                name="branchCode"
                                 value={
-                                    formData.branchCode
+                                    editingBranch
+                                        ? editingBranch.branchCode
+                                        : "Assigned automatically"
                                 }
-                                onChange={handleChange}
-                                required
+                                readOnly
+                                aria-describedby="branch-code-help"
                             />
+
+                            <small id="branch-code-help">
+                                {editingBranch
+                                    ? "Branch codes are assigned automatically and cannot be changed."
+                                    : "WorkPulse will assign the next available branch code when you create this branch."}
+                            </small>
                         </div>
 
                         <div className="management-form-group">

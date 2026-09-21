@@ -238,6 +238,57 @@ export const getAdminDashboard = async () => {
     return data;
 };
 
+export const forceManagementPasswordChange = async (passwordData) => {
+    const token = sessionStorage.getItem("managementToken");
+    const response = await fetch(
+        `${API_BASE_URL}/auth/management/force-password-change`,
+        {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+            body: JSON.stringify(passwordData),
+        }
+    );
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.message || "Unable to set the new password");
+    return data;
+};
+
+export const getDashboardDrilldown = async (type) => {
+    const token = sessionStorage.getItem("managementToken");
+    const response = await fetch(
+        `${API_BASE_URL}/dashboard/drill-down?type=${encodeURIComponent(type)}`,
+        { method: "GET", headers: { Authorization: `Bearer ${token}` } }
+    );
+    const data = await response.json();
+    if (!response.ok) {
+        throw new Error(data.message || "Failed to load dashboard drill-down");
+    }
+    return data;
+};
+
+export const getManagementProfile = async () => {
+    const token = sessionStorage.getItem("managementToken");
+    const response = await fetch(`${API_BASE_URL}/auth/management/profile`, {
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.message || "Failed to load profile");
+    return data;
+};
+
+export const updateManagementProfile = async (profile) => {
+    const token = sessionStorage.getItem("managementToken");
+    const response = await fetch(`${API_BASE_URL}/auth/management/profile`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify(profile),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.message || "Failed to update profile");
+    return data;
+};
+
 export const getBranches = async () => {
     const token = sessionStorage.getItem("managementToken");
 
@@ -680,7 +731,9 @@ export const getAdminApprovalRequests = async () => {
 export const reviewAdminApprovalRequest = async (
     requestId,
     action,
-    reviewNote = ""
+    reviewNote = "",
+    temporaryPassword = "",
+    assignment = {}
 ) => {
     const token = sessionStorage.getItem("managementToken");
 
@@ -695,6 +748,8 @@ export const reviewAdminApprovalRequest = async (
             body: JSON.stringify({
                 action,
                 reviewNote,
+                temporaryPassword,
+                ...assignment,
             }),
         }
     );
@@ -944,6 +999,32 @@ export const getManagementAttendance = async (filters = {}) => {
 
     return data;
 };
+
+const managementJson = async (path, options = {}) => {
+    const token = sessionStorage.getItem("managementToken");
+    const response = await fetch(`${API_BASE_URL}${path}`, {
+        ...options,
+        headers: { Authorization: `Bearer ${token}`, ...(options.headers || {}) },
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.message || "Management request failed");
+    return data;
+};
+
+export const getManagementAlerts = () => managementJson("/alerts");
+export const getOrganizationSettings = () => managementJson("/settings");
+export const updateOrganizationSettings = (settings) => managementJson("/settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(settings) });
+export const getAuditLogs = (filters = {}) => managementJson(`/audit-logs?${new URLSearchParams(filters).toString()}`);
+export const correctManagementAttendance = (attendanceId, correction) => managementJson(`/attendance/management/${attendanceId}/correction`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(correction) });
+export const getAuthorizedAttendancePhoto = async (attendanceId, kind) => {
+    const token = sessionStorage.getItem("managementToken");
+    const response = await fetch(`${API_BASE_URL}/attendance/management/${attendanceId}/photo/${kind}`, { headers: { Authorization: `Bearer ${token}` } });
+    if (!response.ok) { const data = await response.json().catch(() => ({})); throw new Error(data.message || "Attendance photo unavailable"); }
+    return response.blob();
+};
+export const previewEmployeeImport = async (file) => { const token = sessionStorage.getItem("managementToken"); const form = new FormData(); form.append("file", file); const response = await fetch(`${API_BASE_URL}/employees/import/preview`, { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: form }); const data = await response.json(); if (!response.ok) throw new Error(data.message || "Unable to preview import"); return data; };
+export const confirmEmployeeImport = (previewToken) => managementJson("/employees/import/confirm", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ previewToken }) });
+export const downloadEmployeeImportTemplate = async () => { const token = sessionStorage.getItem("managementToken"); const response = await fetch(`${API_BASE_URL}/employees/import-template`, { headers: { Authorization: `Bearer ${token}` } }); if (!response.ok) throw new Error("Unable to download import template"); return response.blob(); };
 
 export const getAttendanceReport = async (filters = {}) => {
     const token = sessionStorage.getItem("managementToken");

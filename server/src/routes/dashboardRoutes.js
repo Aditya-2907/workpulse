@@ -3,6 +3,7 @@ const express = require("express");
 const {
     getSuperAdminDashboard,
     getAdminDashboard,
+    getDashboardDrilldown,
 } = require("../controllers/dashboardController");
 
 const {
@@ -14,6 +15,13 @@ const {
 } = require("../middleware/roleMiddleware");
 
 const router = express.Router();
+
+router.get(
+    "/drill-down",
+    authenticate,
+    allowRoles("SUPER_ADMIN", "ADMIN"),
+    getDashboardDrilldown
+);
 
 router.get(
     "/super-admin",

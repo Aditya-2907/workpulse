@@ -1,5 +1,6 @@
 const db = require("../config/db");
 const generateEmployeeCode = require("../utils/generateEmployeeCode");
+const { writeAuditLog } = require("../services/auditService");
 
 
 // ======================================================
@@ -17,6 +18,8 @@ const createEmployee = async (req, res) => {
 
         const {
             fullName,
+            dateOfBirth,
+            gender,
             phone,
             email,
             branchId,
@@ -185,6 +188,8 @@ const createEmployee = async (req, res) => {
             `INSERT INTO users (
                 employee_code,
                 full_name,
+                date_of_birth,
+                gender,
                 phone,
                 email,
                 password_hash,
@@ -205,7 +210,7 @@ const createEmployee = async (req, res) => {
                 created_by
             )
             VALUES (
-                ?, ?, ?, ?, NULL,
+                ?, ?, ?, ?, ?, ?, NULL,
                 'EMPLOYEE',
                 'ACTIVE',
                 ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
@@ -213,6 +218,8 @@ const createEmployee = async (req, res) => {
             [
                 employeeCode,
                 fullName.trim(),
+                dateOfBirth || null,
+                gender || null,
                 String(phone).trim(),
                 email?.trim() || null,
                 finalBranchId,
@@ -281,6 +288,8 @@ const getEmployees = async (req, res) => {
                 u.id,
                 u.employee_code AS employeeCode,
                 u.full_name AS fullName,
+                DATE_FORMAT(u.date_of_birth, '%Y-%m-%d') AS dateOfBirth,
+                u.gender AS gender,
                 u.phone,
                 u.email,
                 u.designation,
@@ -367,6 +376,8 @@ const getEmployeeById = async (
                 u.id,
                 u.employee_code AS employeeCode,
                 u.full_name AS fullName,
+                DATE_FORMAT(u.date_of_birth, '%Y-%m-%d') AS dateOfBirth,
+                u.gender AS gender,
                 u.phone,
                 u.email,
                 u.designation,
@@ -475,6 +486,8 @@ const updateEmployee = async (
 
         const {
             fullName,
+            dateOfBirth,
+            gender,
             phone,
             email,
             departmentId,
@@ -671,6 +684,8 @@ const updateEmployee = async (
             `UPDATE users
              SET
                 full_name = ?,
+                date_of_birth = ?,
+                gender = ?,
                 phone = ?,
                 email = ?,
                 department_id = ?,
@@ -689,6 +704,8 @@ const updateEmployee = async (
                AND role = 'EMPLOYEE'`,
             [
                 fullName.trim(),
+                dateOfBirth || null,
+                gender || null,
                 String(
                     phone
                 ).trim(),
@@ -714,6 +731,7 @@ const updateEmployee = async (
             ]
         );
 
+        await writeAuditLog(db, { actorId: req.user.id, action: "EMPLOYEE_UPDATED", entityType: "USER", entityId: id, newData: { departmentId, designation: designation.trim() }, req });
         return res.status(200).json({
             success: true,
             message:
@@ -828,6 +846,7 @@ const updateEmployeeStatus = async (
             ]
         );
 
+        await writeAuditLog(db, { actorId: req.user.id, action: "EMPLOYEE_STATUS_CHANGED", entityType: "USER", entityId: id, newData: { accountStatus: status }, req });
         return res.status(200).json({
             success: true,
             message:
@@ -856,11 +875,16 @@ const transferEmployeeBranch = async (
     req,
     res
 ) => {
+    let connection;
+
     try {
         const { id } = req.params;
         const { branchId } = req.body;
 
-        if (!branchId) {
+        if (
+            !Number.isInteger(Number(branchId)) ||
+            Number(branchId) <= 0
+        ) {
             return res.status(400).json({
                 success: false,
                 message:
@@ -868,21 +892,32 @@ const transferEmployeeBranch = async (
             });
         }
 
+        connection = await db.getConnection();
+        await connection.beginTransaction();
+
         const [employees] =
-            await db.query(
+            await connection.query(
                 `SELECT
-                    id,
-                    branch_id
-                 FROM users
-                 WHERE id = ?
-                   AND role = 'EMPLOYEE'
-                 LIMIT 1`,
+                    u.id,
+                    u.employee_code AS employeeCode,
+                    u.full_name AS fullName,
+                    u.branch_id AS branchId,
+                    previous_branch.branch_code AS previousBranchCode,
+                    previous_branch.branch_name AS previousBranchName
+                 FROM users u
+                 LEFT JOIN branches previous_branch
+                    ON previous_branch.id = u.branch_id
+                 WHERE u.id = ?
+                   AND u.role = 'EMPLOYEE'
+                 LIMIT 1 FOR UPDATE`,
                 [id]
             );
 
         if (
             employees.length === 0
         ) {
+            await connection.rollback();
+
             return res.status(404).json({
                 success: false,
                 message:
@@ -891,8 +926,11 @@ const transferEmployeeBranch = async (
         }
 
         const [branches] =
-            await db.query(
-                `SELECT id
+            await connection.query(
+                `SELECT
+                    id,
+                    branch_code AS branchCode,
+                    branch_name AS branchName
                  FROM branches
                  WHERE id = ?
                    AND status = 'ACTIVE'
@@ -903,6 +941,8 @@ const transferEmployeeBranch = async (
         if (
             branches.length === 0
         ) {
+            await connection.rollback();
+
             return res.status(400).json({
                 success: false,
                 message:
@@ -912,11 +952,12 @@ const transferEmployeeBranch = async (
 
         if (
             Number(
-                employees[0]
-                    .branch_id
+                employees[0].branchId
             ) ===
             Number(branchId)
         ) {
+            await connection.rollback();
+
             return res.status(400).json({
                 success: false,
                 message:
@@ -924,7 +965,10 @@ const transferEmployeeBranch = async (
             });
         }
 
-        await db.query(
+        const employee = employees[0];
+        const destinationBranch = branches[0];
+
+        await connection.query(
             `UPDATE users
              SET branch_id = ?
              WHERE id = ?
@@ -935,12 +979,76 @@ const transferEmployeeBranch = async (
             ]
         );
 
+        await connection.query(
+            `INSERT INTO audit_logs (
+                performed_by,
+                action,
+                entity_type,
+                entity_id,
+                old_data,
+                new_data,
+                ip_address,
+                user_agent
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+                req.user.id,
+                "EMPLOYEE_BRANCH_TRANSFER",
+                "EMPLOYEE",
+                employee.id,
+                JSON.stringify({
+                    employeeCode: employee.employeeCode,
+                    fullName: employee.fullName,
+                    branchId: employee.branchId,
+                    branchCode: employee.previousBranchCode,
+                    branchName: employee.previousBranchName,
+                }),
+                JSON.stringify({
+                    employeeCode: employee.employeeCode,
+                    fullName: employee.fullName,
+                    branchId: destinationBranch.id,
+                    branchCode: destinationBranch.branchCode,
+                    branchName: destinationBranch.branchName,
+                }),
+                req.ip || null,
+                req.get("user-agent") || null,
+            ]
+        );
+
+        await writeAuditLog(connection, {
+            actorId: req.user.id,
+            action: "EMPLOYEE_CREATED",
+            entityType: "USER",
+            entityId: result.insertId,
+            newData: { employeeCode, branchId: finalBranchId, departmentId, designation: designation.trim() },
+            req,
+        });
+
+        await connection.commit();
+
         return res.status(200).json({
             success: true,
             message:
                 "Employee transferred successfully",
+            transfer: {
+                employeeId: employee.id,
+                previousBranch: {
+                    id: employee.branchId,
+                    code: employee.previousBranchCode,
+                    name: employee.previousBranchName,
+                },
+                newBranch: {
+                    id: destinationBranch.id,
+                    code: destinationBranch.branchCode,
+                    name: destinationBranch.branchName,
+                },
+            },
         });
     } catch (error) {
+        if (connection) {
+            await connection.rollback();
+        }
+
         console.error(
             "Employee branch transfer error:",
             error
@@ -951,6 +1059,10 @@ const transferEmployeeBranch = async (
             message:
                 "Internal server error",
         });
+    } finally {
+        if (connection) {
+            connection.release();
+        }
     }
 };
 

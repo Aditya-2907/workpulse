@@ -99,7 +99,8 @@ const attachWeeklyOffsToBranches = async (
 
 const saveWeeklyOffs = async (
     branchId,
-    weeklyOffs
+    weeklyOffs,
+    connection = db
 ) => {
     if (!weeklyOffs.length) {
         return;
@@ -112,7 +113,7 @@ const saveWeeklyOffs = async (
         ]
     );
 
-    await db.query(
+    await connection.query(
         `INSERT INTO branch_weekly_offs (
             branch_id,
             weekday
@@ -122,12 +123,31 @@ const saveWeeklyOffs = async (
     );
 };
 
+const BRANCH_CODE_LOCK =
+    "workpulse_branch_code_generation";
+
+const getNextBranchCode = async (connection) => {
+    const [rows] = await connection.query(
+        `SELECT
+            COALESCE(
+                MAX(CAST(SUBSTRING(branch_code, 3) AS UNSIGNED)),
+                0
+            ) + 1 AS nextSequence
+         FROM branches
+         WHERE branch_code REGEXP '^BR[0-9]+$'`
+    );
+
+    return `BR${String(Number(rows[0].nextSequence)).padStart(3, "0")}`;
+};
+
 // End Aditya
 
 const createBranch = async (req, res) => {
+    let connection;
+    let branchCodeLockAcquired = false;
+
     try {
         const {
-            branchCode,
             branchName,
             address,
             pincode,
@@ -137,7 +157,6 @@ const createBranch = async (req, res) => {
         } = req.body;
 
         if (
-            !branchCode ||
             !branchName ||
             !address ||
             !pincode ||
@@ -168,23 +187,28 @@ const createBranch = async (req, res) => {
 
         // End Aditya
 
-        const [existing] = await db.query(
-            `SELECT id
-             FROM branches
-             WHERE branch_code = ?
-             LIMIT 1`,
-            [branchCode]
+        connection = await db.getConnection();
+
+        const [lockRows] = await connection.query(
+            "SELECT GET_LOCK(?, 10) AS acquired",
+            [BRANCH_CODE_LOCK]
         );
 
-        if (existing.length > 0) {
-            return res.status(409).json({
+        if (Number(lockRows[0].acquired) !== 1) {
+            return res.status(503).json({
                 success: false,
                 message:
-                    "Branch code already exists",
+                    "Branch creation is temporarily busy. Please try again.",
             });
         }
 
-        const [result] = await db.query(
+        branchCodeLockAcquired = true;
+        await connection.beginTransaction();
+
+        const branchCode =
+            await getNextBranchCode(connection);
+
+        const [result] = await connection.query(
             `INSERT INTO branches (
                 branch_code,
                 branch_name,
@@ -209,16 +233,20 @@ const createBranch = async (req, res) => {
 
         await saveWeeklyOffs(
             result.insertId,
-            normalizedWeeklyOffs
+            normalizedWeeklyOffs,
+            connection
         );
 
         // End Aditya
+
+        await connection.commit();
 
         return res.status(201).json({
             success: true,
             message:
                 "Branch created successfully",
             branchId: result.insertId,
+            branchCode,
 
             // Start Aditya
             weeklyOffs:
@@ -226,6 +254,10 @@ const createBranch = async (req, res) => {
             // End Aditya
         });
     } catch (error) {
+        if (connection) {
+            await connection.rollback();
+        }
+
         console.error(
             "Create branch error:",
             error
@@ -236,6 +268,17 @@ const createBranch = async (req, res) => {
             message:
                 "Internal server error",
         });
+    } finally {
+        if (branchCodeLockAcquired) {
+            await connection.query(
+                "SELECT RELEASE_LOCK(?)",
+                [BRANCH_CODE_LOCK]
+            );
+        }
+
+        if (connection) {
+            connection.release();
+        }
     }
 };
 
@@ -354,7 +397,6 @@ const updateBranch = async (req, res) => {
         const { id } = req.params;
 
         const {
-            branchCode,
             branchName,
             address,
             pincode,
@@ -380,7 +422,6 @@ const updateBranch = async (req, res) => {
         }
 
         if (
-            !branchCode ||
             !branchName ||
             !address ||
             !pincode ||
@@ -399,12 +440,6 @@ const updateBranch = async (req, res) => {
         const normalizedWeeklyOffs =
             normalizeWeeklyOffs(weeklyOffs);
 
-        console.log(
-            "UPDATE BRANCH WEEKLY OFFS:",
-            id,
-            normalizedWeeklyOffs
-        );
-
         if (
             normalizedWeeklyOffs === null
         ) {
@@ -417,27 +452,9 @@ const updateBranch = async (req, res) => {
 
         // End Aditya
 
-        const [duplicate] = await db.query(
-            `SELECT id
-             FROM branches
-             WHERE branch_code = ?
-             AND id <> ?
-             LIMIT 1`,
-            [branchCode, id]
-        );
-
-        if (duplicate.length > 0) {
-            return res.status(409).json({
-                success: false,
-                message:
-                    "Branch code already exists",
-            });
-        }
-
         await db.query(
             `UPDATE branches
              SET
-                branch_code = ?,
                 branch_name = ?,
                 address = ?,
                 pincode = ?,
@@ -445,7 +462,6 @@ const updateBranch = async (req, res) => {
                 longitude = ?
              WHERE id = ?`,
             [
-                branchCode,
                 branchName,
                 address,
                 pincode,

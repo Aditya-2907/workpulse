@@ -168,7 +168,13 @@ const asDisplayValue = (value, fallback = "--") => value === null || value === u
 const formatMinutes = (minutes) => {
     if (minutes === null || minutes === undefined || minutes === "") return "--";
     const numericMinutes = Number(minutes);
-    return Number.isFinite(numericMinutes) ? `${Math.floor(numericMinutes / 60)}h ${numericMinutes % 60}m` : "--";
+    if (!Number.isFinite(numericMinutes) || numericMinutes < 0) return "--";
+    const totalMinutes = Math.floor(numericMinutes);
+    const hours = Math.floor(totalMinutes / 60);
+    const remainingMinutes = totalMinutes % 60;
+    if (hours === 0) return `${remainingMinutes} min`;
+    if (remainingMinutes === 0) return `${hours} hr`;
+    return `${hours} hr ${remainingMinutes} min`;
 };
 const formatTime = (value) => normalizeTimeOnly(value) || "--";
 

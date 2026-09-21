@@ -33,6 +33,8 @@ CREATE TABLE IF NOT EXISTS branches (
 CREATE TABLE IF NOT EXISTS departments (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
 
+    department_code VARCHAR(50) NOT NULL UNIQUE,
+
     department_name VARCHAR(150) NOT NULL UNIQUE,
 
     status ENUM('ACTIVE', 'INACTIVE')
@@ -56,11 +58,16 @@ CREATE TABLE IF NOT EXISTS users (
 
     full_name VARCHAR(150) NOT NULL,
 
+    date_of_birth DATE NULL,
+    gender ENUM('FEMALE', 'MALE', 'NON_BINARY', 'PREFER_NOT_TO_SAY') NULL,
+
     phone VARCHAR(20) NOT NULL UNIQUE,
 
     email VARCHAR(150) NULL UNIQUE,
 
     password_hash VARCHAR(255) NULL,
+
+    must_change_password BOOLEAN NOT NULL DEFAULT FALSE,
 
     token_version INT UNSIGNED NOT NULL DEFAULT 0,
 
@@ -425,4 +432,59 @@ CREATE TABLE IF NOT EXISTS audit_logs (
     ),
 
     INDEX idx_audit_created_at (created_at)
+);
+
+-- =========================================================
+-- 9. ORGANIZATION SETTINGS
+-- Single-row operational settings; historical attendance is never rewritten.
+-- =========================================================
+
+CREATE TABLE IF NOT EXISTS organization_settings (
+    id TINYINT UNSIGNED NOT NULL PRIMARY KEY,
+    organization_name VARCHAR(150) NOT NULL,
+    organization_address TEXT NULL,
+    organization_phone VARCHAR(30) NULL,
+    organization_email VARCHAR(150) NULL,
+    timezone_name VARCHAR(64) NOT NULL DEFAULT 'Asia/Kolkata',
+    attendance_alert_threshold DECIMAL(5,2) NOT NULL DEFAULT 70.00,
+    photo_retention_days SMALLINT UNSIGNED NOT NULL DEFAULT 90,
+    missing_checkout_grace_minutes SMALLINT UNSIGNED NOT NULL DEFAULT 30,
+    device_enforcement_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+    setup_completed_at DATETIME NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT chk_organization_settings_single_row CHECK (id = 1)
+);
+
+-- =========================================================
+-- 10. ATTENDANCE CORRECTION HISTORY AND OPTIONAL DEVICES
+-- =========================================================
+
+CREATE TABLE IF NOT EXISTS attendance_corrections (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    attendance_record_id BIGINT UNSIGNED NOT NULL,
+    corrected_by BIGINT UNSIGNED NOT NULL,
+    reason VARCHAR(500) NOT NULL,
+    original_data JSON NOT NULL,
+    corrected_data JSON NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_attendance_correction_record FOREIGN KEY (attendance_record_id)
+        REFERENCES attendance_records(id) ON DELETE RESTRICT,
+    CONSTRAINT fk_attendance_correction_actor FOREIGN KEY (corrected_by)
+        REFERENCES users(id) ON DELETE RESTRICT,
+    INDEX idx_attendance_correction_record (attendance_record_id)
+);
+
+CREATE TABLE IF NOT EXISTS attendance_devices (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    display_name VARCHAR(120) NOT NULL,
+    device_token_hash CHAR(64) NOT NULL UNIQUE,
+    status ENUM('ACTIVE', 'REVOKED') NOT NULL DEFAULT 'ACTIVE',
+    created_by BIGINT UNSIGNED NOT NULL,
+    last_used_at DATETIME NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    revoked_at DATETIME NULL,
+    CONSTRAINT fk_attendance_device_creator FOREIGN KEY (created_by)
+        REFERENCES users(id) ON DELETE RESTRICT,
+    INDEX idx_attendance_device_status (status)
 );

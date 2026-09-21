@@ -4,7 +4,13 @@ import {
     getManagementAttendance,
     getBranches,
     getEmployees,
+    correctManagementAttendance,
+    getAuthorizedAttendancePhoto,
 } from "../services/api";
+import {
+    formatAttendanceTime,
+    formatWorkedDuration,
+} from "../utils/attendanceDisplay";
 
 const Attendance = () => {
     const managementUser = JSON.parse(
@@ -25,6 +31,13 @@ const Attendance = () => {
 
     const [branches, setBranches] = useState([]);
     const [employees, setEmployees] = useState([]);
+
+    const [pageSize, setPageSize] = useState(50);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [selectedPhoto, setSelectedPhoto] = useState(null);
+    const [photoUnavailable, setPhotoUnavailable] = useState(false);
+    const [correction, setCorrection] = useState(null);
+    const [correcting, setCorrecting] = useState(false);
 
     const [filters, setFilters] = useState({
         startDate: "",
@@ -69,6 +82,7 @@ const Attendance = () => {
                 attendanceRecords:
                     attendanceResponse.attendanceRecords || [],
             });
+            setCurrentPage(1);
 
             setEmployees(
                 employeeResponse.employees ||
@@ -101,6 +115,14 @@ const Attendance = () => {
         loadInitialData();
     }, []);
 
+    useEffect(() => {
+        const onKeyDown = (event) => {
+            if (event.key === "Escape") setSelectedPhoto(null);
+        };
+        window.addEventListener("keydown", onKeyDown);
+        return () => window.removeEventListener("keydown", onKeyDown);
+    }, []);
+
     const handleFilterChange = (event) => {
         const { name, value } = event.target;
 
@@ -125,6 +147,7 @@ const Attendance = () => {
                 attendanceRecords:
                     response.attendanceRecords || [],
             });
+            setCurrentPage(1);
         } catch (err) {
             console.error(err);
             setError(
@@ -159,6 +182,7 @@ const Attendance = () => {
                 attendanceRecords:
                     response.attendanceRecords || [],
             });
+            setCurrentPage(1);
         } catch (err) {
             console.error(err);
             setError(
@@ -194,28 +218,6 @@ const Attendance = () => {
         return `${day}-${month}-${year}`;
     };
 
-    const formatDateTime = (dateTimeValue) => {
-        if (!dateTimeValue) {
-            return "-";
-        }
-
-        const date = new Date(dateTimeValue);
-
-        if (Number.isNaN(date.getTime())) {
-            return "-";
-        }
-
-        return date.toLocaleString("en-IN", {
-            day: "2-digit",
-            month: "2-digit",
-            year: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-            second: "2-digit",
-            hour12: true,
-        });
-    };
-
     const formatStatus = (status) => {
         if (!status) {
             return "-";
@@ -229,7 +231,48 @@ const Attendance = () => {
             );
     };
 
+    const openPhoto = async (record, type) => {
+        const available = type === "CHECK_IN" ? record.checkInPhotoAvailable : record.checkOutPhotoAvailable;
+        if (!available) return;
+        try {
+            setPhotoUnavailable(false);
+            const photo = await getAuthorizedAttendancePhoto(record.id, type === "CHECK_IN" ? "check-in" : "check-out");
+            setSelectedPhoto({
+            url: URL.createObjectURL(photo),
+            label: type === "CHECK_IN" ? "Check-In Photo" : "Check-Out Photo",
+            fullName: record.fullName,
+            employeeCode: record.employeeCode,
+            attendanceDate: record.attendanceDate,
+            time: type === "CHECK_IN" ? record.checkInTimeLocal || record.checkInTime : record.checkOutTimeLocal || record.checkOutTime,
+            });
+        } catch (photoError) { setError(photoError.message || "Photo unavailable"); }
+    };
+
+    const toInputTime = (value) => {
+        if (!value) return "";
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return "";
+        const pad = (item) => String(item).padStart(2, "0");
+        return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+    };
+
+    const submitCorrection = async (event) => {
+        event.preventDefault();
+        try {
+            setCorrecting(true); setError("");
+            await correctManagementAttendance(correction.id, correction);
+            setCorrection(null);
+            await handleApplyFilters({ preventDefault() {} });
+        } catch (correctionError) { setError(correctionError.message || "Unable to correct attendance"); }
+        finally { setCorrecting(false); }
+    };
+
     const summary = attendanceData.summary || {};
+    const attendanceRecords = attendanceData.attendanceRecords || [];
+    const totalPages = Math.max(1, Math.ceil(attendanceRecords.length / pageSize));
+    const safeCurrentPage = Math.min(currentPage, totalPages);
+    const pageStart = (safeCurrentPage - 1) * pageSize;
+    const visibleAttendanceRecords = attendanceRecords.slice(pageStart, pageStart + pageSize);
 
     const summaryCards = useMemo(
         () => [
@@ -436,7 +479,7 @@ const Attendance = () => {
                     </div>
                 </form>
 
-                <div className="attendance-summary-grid">
+                <div className="attendance-summary-grid attendance-management-summary-grid">
                     {summaryCards.map((card) => (
                         <div
                             className="attendance-summary-card"
@@ -462,25 +505,29 @@ const Attendance = () => {
 
                             <p>
                                 {
-                                    attendanceData
-                                        .attendanceRecords
-                                        .length
+                                    attendanceRecords.length
                                 }{" "}
                                 record(s) found
                             </p>
                         </div>
+                        <label className="management-page-size-control attendance-page-size-control">
+                            <span>Rows per page</span>
+                            <select value={pageSize} onChange={(event) => { setPageSize(Number(event.target.value)); setCurrentPage(1); }}>
+                                {[50, 100, 150, 200].map((size) => <option key={size} value={size}>{size}</option>)}
+                            </select>
+                        </label>
                     </div>
 
                     {loading ? (
                         <div className="management-loading">
                             Loading attendance...
                         </div>
-                    ) : attendanceData
-                        .attendanceRecords.length === 0 ? (
+                    ) : attendanceRecords.length === 0 ? (
                         <div className="management-empty-state">
                             No attendance records found.
                         </div>
                     ) : (
+                        <>
                         <div className="management-table-wrapper">
                             <table className="management-table">
                                 <thead>
@@ -502,11 +549,13 @@ const Attendance = () => {
                                             Early Departure
                                         </th>
                                         <th>Status</th>
+                                        <th>Check-In Photo</th>
+                                        <th>Check-Out Photo</th>
                                     </tr>
                                 </thead>
 
                                 <tbody>
-                                    {attendanceData.attendanceRecords.map(
+                                    {visibleAttendanceRecords.map(
                                         (record) => (
                                             <tr
                                                 key={
@@ -551,24 +600,23 @@ const Attendance = () => {
                                                 </td>
 
                                                 <td>
-                                                    {formatDateTime(
+                                                    {formatAttendanceTime(
+                                                        record.checkInTimeLocal ||
                                                         record.checkInTime
                                                     )}
                                                 </td>
 
                                                 <td>
-                                                    {formatDateTime(
+                                                    {formatAttendanceTime(
+                                                        record.checkOutTimeLocal ||
                                                         record.checkOutTime
                                                     )}
                                                 </td>
 
                                                 <td>
-                                                    {record.workedMinutes ??
-                                                        "-"}
-                                                    {record.workedMinutes !=
-                                                        null
-                                                        ? " min"
-                                                        : ""}
+                                                    {formatWorkedDuration(
+                                                        record.workedMinutes
+                                                    )}
                                                 </td>
 
                                                 <td>
@@ -598,6 +646,15 @@ const Attendance = () => {
                                                             record.attendanceStatus
                                                         )}
                                                     </span>
+                                                    {isSuperAdmin && <button type="button" className="attendance-photo-view-button" onClick={() => setCorrection({ id: record.id, checkInTime: toInputTime(record.checkInTimeLocal || record.checkInTime), checkOutTime: toInputTime(record.checkOutTimeLocal || record.checkOutTime), reason: "" })}>Correct</button>}
+                                                </td>
+
+                                                <td className="attendance-photo-cell">
+                                                    {record.checkInPhotoAvailable ? <button type="button" className="attendance-photo-view-button" onClick={() => openPhoto(record, "CHECK_IN")}>View</button> : <span className="attendance-photo-unavailable">Unavailable</span>}
+                                                </td>
+
+                                                <td className="attendance-photo-cell">
+                                                    {record.checkOutPhotoAvailable ? <button type="button" className="attendance-photo-view-button" onClick={() => openPhoto(record, "CHECK_OUT")}>View</button> : <span className="attendance-photo-unavailable">Unavailable</span>}
                                                 </td>
                                             </tr>
                                         )
@@ -605,9 +662,25 @@ const Attendance = () => {
                                 </tbody>
                             </table>
                         </div>
+
+                        <div className="management-table-footer attendance-pagination-footer" aria-label="Attendance pages">
+                            <span className="attendance-pagination-info">Page {safeCurrentPage} of {totalPages}</span>
+                            <div className="management-pagination attendance-pagination-actions">
+                                <button type="button" className="management-secondary-button" onClick={() => setCurrentPage(safeCurrentPage - 1)} disabled={safeCurrentPage === 1}>Previous</button>
+                                <button type="button" className="management-secondary-button" onClick={() => setCurrentPage(safeCurrentPage + 1)} disabled={safeCurrentPage === totalPages}>Next</button>
+                            </div>
+                        </div>
+                        </>
                     )}
                 </div>
             </div>
+            {selectedPhoto && <div className="management-modal-backdrop attendance-photo-backdrop" role="presentation" onMouseDown={() => setSelectedPhoto(null)}>
+                <section className="attendance-photo-modal" role="dialog" aria-modal="true" aria-labelledby="attendance-photo-title" onMouseDown={(event) => event.stopPropagation()}>
+                    <div className="attendance-photo-modal-header"><div><p>{selectedPhoto.label}</p><h3 id="attendance-photo-title">{selectedPhoto.fullName}</h3><span>{selectedPhoto.employeeCode} · {formatDate(selectedPhoto.attendanceDate)}{selectedPhoto.time ? ` · ${formatAttendanceTime(selectedPhoto.time)}` : ""}</span></div><button type="button" className="attendance-photo-close" onClick={() => setSelectedPhoto(null)} aria-label="Close photo viewer">×</button></div>
+                    {photoUnavailable ? <div className="management-empty-state">Photo unavailable.</div> : <img className="attendance-photo-preview" src={selectedPhoto.url} alt={`${selectedPhoto.label} for ${selectedPhoto.fullName}`} onError={() => setPhotoUnavailable(true)} />}
+                </section>
+            </div>}
+            {correction && <div className="management-modal-backdrop" role="presentation" onMouseDown={() => setCorrection(null)}><section className="attendance-photo-modal" role="dialog" aria-modal="true" aria-labelledby="attendance-correction-title" onMouseDown={(event) => event.stopPropagation()}><div className="attendance-photo-modal-header"><div><p>Super Admin only</p><h3 id="attendance-correction-title">Correct attendance</h3><span>Derived duration, rate, late status and attendance status will be recalculated.</span></div><button type="button" className="attendance-photo-close" onClick={() => setCorrection(null)} aria-label="Close correction dialog">×</button></div><form className="management-form-card" onSubmit={submitCorrection}><div className="management-form-grid"><div className="management-form-group"><label>Check in</label><input type="datetime-local" value={correction.checkInTime} onChange={(event) => setCorrection({ ...correction, checkInTime: event.target.value })} required /></div><div className="management-form-group"><label>Check out</label><input type="datetime-local" value={correction.checkOutTime} onChange={(event) => setCorrection({ ...correction, checkOutTime: event.target.value })} /></div><div className="management-form-group"><label>Reason</label><textarea value={correction.reason} onChange={(event) => setCorrection({ ...correction, reason: event.target.value })} required maxLength="500" /></div></div><div className="management-form-actions"><button type="submit" className="management-primary-button" disabled={correcting}>{correcting ? "Saving…" : "Save correction"}</button></div></form></section></div>}
         </ManagementLayout>
     );
 };

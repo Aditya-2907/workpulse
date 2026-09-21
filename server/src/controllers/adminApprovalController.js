@@ -1,10 +1,13 @@
 const bcrypt = require("bcryptjs");
 const db = require("../config/db");
 const generateEmployeeCode = require("../utils/generateEmployeeCode");
+const { writeAuditLog } = require("../services/auditService");
 
 
 // ======================================================
-// ADMIN: REQUEST CREATION OF ANOTHER ADMIN
+// ADMIN: REQUEST ACCESS FOR AN ADMIN CANDIDATE.
+// This intake accepts only candidate-owned information. Organization access is
+// assigned by a Super Admin during approval; no permanent password is accepted.
 // ======================================================
 
 const requestAdminCreation = async (
@@ -21,30 +24,18 @@ const requestAdminCreation = async (
             fullName,
             phone,
             email,
-            password,
-            departmentId,
-            designation,
+            dateOfBirth,
+            gender,
             address,
             pincode,
-            qualification,
-            computerSkill,
             aadhaarNumber,
             panNumber,
-            dutyStartTime,
-            dutyEndTime,
-            joiningDate,
         } = req.body;
 
         if (
             !fullName ||
             !phone ||
-            !password ||
-            !departmentId ||
-            !designation ||
-            !aadhaarNumber ||
-            !dutyStartTime ||
-            !dutyEndTime ||
-            !joiningDate
+            !aadhaarNumber
         ) {
             await connection.rollback();
 
@@ -55,14 +46,20 @@ const requestAdminCreation = async (
             });
         }
 
-        if (password.length < 8) {
+        if (
+            dateOfBirth &&
+            !/^\d{4}-\d{2}-\d{2}$/.test(dateOfBirth)
+        ) {
             await connection.rollback();
+            return res.status(400).json({ success: false, message: "Date of birth must use YYYY-MM-DD format" });
+        }
 
-            return res.status(400).json({
-                success: false,
-                message:
-                    "Password must be at least 8 characters",
-            });
+        if (
+            gender &&
+            !["FEMALE", "MALE", "NON_BINARY", "PREFER_NOT_TO_SAY"].includes(gender)
+        ) {
+            await connection.rollback();
+            return res.status(400).json({ success: false, message: "Invalid gender value" });
         }
 
         // --------------------------------------------------
@@ -73,7 +70,6 @@ const requestAdminCreation = async (
             await connection.query(
                 `SELECT
                     id,
-                    branch_id,
                     account_status
 
                  FROM users
@@ -96,71 +92,6 @@ const requestAdminCreation = async (
                 success: false,
                 message:
                     "Active Admin account required",
-            });
-        }
-
-        // --------------------------------------------------
-        // New Admin always belongs to requesting
-        // Admin's branch.
-        // Frontend cannot choose another branch.
-        // --------------------------------------------------
-
-        const branchId =
-            requesters[0].branch_id;
-
-        if (!branchId) {
-            await connection.rollback();
-
-            return res.status(400).json({
-                success: false,
-                message:
-                    "Requesting Admin has no assigned branch",
-            });
-        }
-
-        const [branches] =
-            await connection.query(
-                `SELECT id
-                 FROM branches
-                 WHERE id = ?
-                   AND status = 'ACTIVE'
-                 LIMIT 1`,
-                [branchId]
-            );
-
-        if (branches.length === 0) {
-            await connection.rollback();
-
-            return res.status(400).json({
-                success: false,
-                message:
-                    "Assigned branch is inactive or invalid",
-            });
-        }
-
-        // --------------------------------------------------
-        // Validate Department
-        // --------------------------------------------------
-
-        const [departments] =
-            await connection.query(
-                `SELECT id
-                 FROM departments
-                 WHERE id = ?
-                   AND status = 'ACTIVE'
-                 LIMIT 1`,
-                [departmentId]
-            );
-
-        if (
-            departments.length === 0
-        ) {
-            await connection.rollback();
-
-            return res.status(400).json({
-                success: false,
-                message:
-                    "Invalid or inactive department",
             });
         }
 
@@ -211,14 +142,9 @@ const requestAdminCreation = async (
                 "ADMIN"
             );
 
-        const passwordHash =
-            await bcrypt.hash(
-                password,
-                10
-            );
-
         // --------------------------------------------------
-        // Create ADMIN as PENDING_APPROVAL
+        // Create a passwordless pending Admin. The Super Admin supplies a
+        // temporary password only when approving the request.
         // --------------------------------------------------
 
         const [userResult] =
@@ -228,7 +154,10 @@ const requestAdminCreation = async (
                     full_name,
                     phone,
                     email,
+                    date_of_birth,
+                    gender,
                     password_hash,
+                    must_change_password,
                     role,
                     account_status,
                     branch_id,
@@ -246,10 +175,10 @@ const requestAdminCreation = async (
                     created_by
                 )
                 VALUES (
-                    ?, ?, ?, ?, ?,
+                    ?, ?, ?, ?, ?, ?, NULL, TRUE,
                     'ADMIN',
                     'PENDING_APPROVAL',
-                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+                    NULL, NULL, NULL, ?, ?, NULL, FALSE, ?, ?, NULL, NULL, NULL, ?
                 )`,
                 [
                     employeeCode,
@@ -257,25 +186,15 @@ const requestAdminCreation = async (
                     phone.trim(),
                     email?.trim() ||
                     null,
-                    passwordHash,
-                    branchId,
-                    departmentId,
-                    designation.trim(),
+                    dateOfBirth || null,
+                    gender || null,
                     address?.trim() ||
                     null,
                     pincode?.trim() ||
                     null,
-                    qualification?.trim() ||
-                    null,
-                    Boolean(
-                        computerSkill
-                    ),
                     aadhaarNumber.trim(),
                     panNumber?.trim() ||
                     null,
-                    dutyStartTime,
-                    dutyEndTime,
-                    joiningDate,
                     req.user.id,
                 ]
             );
@@ -301,6 +220,15 @@ const requestAdminCreation = async (
                     req.user.id,
                 ]
             );
+
+        await writeAuditLog(connection, {
+            actorId: req.user.id,
+            action: "ADMIN_REQUEST_CREATED",
+            entityType: "ADMIN_APPROVAL_REQUEST",
+            entityId: requestResult.insertId,
+            newData: { candidateUserId: userResult.insertId, employeeCode, status: "PENDING" },
+            req,
+        });
 
         await connection.commit();
 
@@ -476,6 +404,11 @@ const reviewAdminApprovalRequest =
             const {
                 action,
                 reviewNote,
+                temporaryPassword,
+                branchId,
+                departmentId,
+                designation,
+                joiningDate,
             } = req.body;
 
             if (
@@ -493,6 +426,43 @@ const reviewAdminApprovalRequest =
                         message:
                             "Action must be APPROVE or REJECT",
                     });
+            }
+
+            if (
+                action === "APPROVE" &&
+                (typeof temporaryPassword !== "string" || temporaryPassword.length < 8)
+            ) {
+                await connection.rollback();
+                return res.status(400).json({
+                    success: false,
+                    message: "A temporary password of at least 8 characters is required to approve this request",
+                });
+            }
+
+            if (
+                action === "APPROVE" &&
+                (!branchId || !departmentId || !designation?.trim() || !joiningDate)
+            ) {
+                await connection.rollback();
+                return res.status(400).json({
+                    success: false,
+                    message: "Branch, department, designation and joining date are required to approve this request",
+                });
+            }
+
+            if (action === "APPROVE") {
+                const [[branch]] = await connection.query(
+                    "SELECT id FROM branches WHERE id = ? AND status = 'ACTIVE' LIMIT 1",
+                    [branchId]
+                );
+                const [[department]] = await connection.query(
+                    "SELECT id FROM departments WHERE id = ? AND status = 'ACTIVE' LIMIT 1",
+                    [departmentId]
+                );
+                if (!branch || !department) {
+                    await connection.rollback();
+                    return res.status(400).json({ success: false, message: "Choose active branch and department assignments" });
+                }
             }
 
             // --------------------------------------------------
@@ -607,6 +577,11 @@ const reviewAdminApprovalRequest =
                     ? "ACTIVE"
                     : "REJECTED";
 
+            const temporaryPasswordHash =
+                action === "APPROVE"
+                    ? await bcrypt.hash(temporaryPassword, 10)
+                    : null;
+
             // --------------------------------------------------
             // Update Approval Request
             // --------------------------------------------------
@@ -640,6 +615,36 @@ const reviewAdminApprovalRequest =
                  SET
                     account_status = ?,
 
+                    password_hash = CASE
+                        WHEN ? = 'APPROVE' THEN ?
+                        ELSE password_hash
+                    END,
+
+                    must_change_password = CASE
+                        WHEN ? = 'APPROVE' THEN TRUE
+                        ELSE must_change_password
+                    END,
+
+                    branch_id = CASE
+                        WHEN ? = 'APPROVE' THEN ?
+                        ELSE branch_id
+                    END,
+
+                    department_id = CASE
+                        WHEN ? = 'APPROVE' THEN ?
+                        ELSE department_id
+                    END,
+
+                    designation = CASE
+                        WHEN ? = 'APPROVE' THEN ?
+                        ELSE designation
+                    END,
+
+                    joining_date = CASE
+                        WHEN ? = 'APPROVE' THEN ?
+                        ELSE joining_date
+                    END,
+
                     leaving_date =
                         CASE
                             WHEN ? =
@@ -652,10 +657,33 @@ const reviewAdminApprovalRequest =
                    AND role = 'ADMIN'`,
                 [
                     userStatus,
+                    action,
+                    temporaryPasswordHash,
+                    action,
+                    action,
+                    branchId || null,
+                    action,
+                    departmentId || null,
+                    action,
+                    designation?.trim() || null,
+                    action,
+                    joiningDate || null,
                     userStatus,
                     request.admin_user_id,
                 ]
             );
+
+            await writeAuditLog(connection, {
+                actorId: req.user.id,
+                action: action === "APPROVE" ? "ADMIN_REQUEST_APPROVED" : "ADMIN_REQUEST_REJECTED",
+                entityType: "ADMIN_APPROVAL_REQUEST",
+                entityId: id,
+                oldData: { status: "PENDING" },
+                newData: action === "APPROVE"
+                    ? { status: requestStatus, candidateUserId: request.admin_user_id, branchId, departmentId, mustChangePassword: true }
+                    : { status: requestStatus, candidateUserId: request.admin_user_id },
+                req,
+            });
 
             await connection.commit();
 

@@ -23,6 +23,9 @@ const {
 const {
     uploadAttendancePhoto,
 } = require("../middleware/uploadMiddleware");
+const { attendanceLoginLimiter } = require("../middleware/rateLimiters");
+const { correctAttendance } = require("../controllers/attendanceCorrectionController");
+const { getAuthorizedAttendancePhoto } = require("../controllers/attendancePhotoController");
 
 const router = express.Router();
 
@@ -35,6 +38,7 @@ const router = express.Router();
 
 router.post(
     "/login",
+    attendanceLoginLimiter,
     attendanceLogin
 );
 
@@ -71,6 +75,20 @@ router.get(
     authenticate,
     allowRoles("ADMIN", "SUPER_ADMIN"),
     getManagementAttendance
+);
+
+router.patch(
+    "/management/:id/correction",
+    authenticate,
+    allowRoles("SUPER_ADMIN"),
+    correctAttendance
+);
+
+router.get(
+    "/management/:id/photo/:kind",
+    authenticate,
+    allowRoles("ADMIN", "SUPER_ADMIN"),
+    getAuthorizedAttendancePhoto
 );
 
 module.exports = router;

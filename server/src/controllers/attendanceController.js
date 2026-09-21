@@ -1205,8 +1205,8 @@ const getManagementAttendance = async (req, res) => {
                     '%H:%i:%s'
                 ) AS checkOutTimeLocal,
 
-                ar.check_in_photo_path AS checkInPhotoPath,
-                ar.check_out_photo_path AS checkOutPhotoPath,
+                CASE WHEN ar.check_in_photo_path IS NULL THEN 0 ELSE 1 END AS checkInPhotoAvailable,
+                CASE WHEN ar.check_out_photo_path IS NULL THEN 0 ELSE 1 END AS checkOutPhotoAvailable,
 
                 ar.check_in_distance_meters AS checkInDistanceMeters,
                 ar.check_out_distance_meters AS checkOutDistanceMeters,

@@ -13,11 +13,13 @@ const {
 const {
     allowRoles,
 } = require("../middleware/roleMiddleware");
+const { adminRequestLimiter } = require("../middleware/rateLimiters");
 
 const router = express.Router();
 
 router.post(
     "/request",
+    adminRequestLimiter,
     authenticate,
     allowRoles("ADMIN"),
     requestAdminCreation

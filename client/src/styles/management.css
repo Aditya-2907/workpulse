@@ -4,14 +4,23 @@
 
 :root {
     --management-sidebar-width: 260px;
-    --management-background: #f5f7fb;
+    --management-background: #f4f7f8;
     --management-surface: #ffffff;
-    --management-primary: #3157d5;
-    --management-primary-soft: #eef2ff;
-    --management-text: #192033;
-    --management-muted: #737b8c;
-    --management-border: #e7eaf0;
-    --management-sidebar: #121a2c;
+    --management-primary: #0f9d91;
+    --management-primary-soft: #e7f6f3;
+    --management-text: #172b3a;
+    --management-muted: #64748b;
+    --management-border: #dce5e9;
+    --management-sidebar: #0b1f33;
+    --management-primary-hover: #0b8278;
+    --management-surface-secondary: #f7faf9;
+    --management-success: #21865b;
+    --management-warning: #d98a16;
+    --management-danger: #d64545;
+    --management-shadow-sm: 0 4px 20px rgba(31, 42, 68, 0.04);
+    --management-shadow-md: 0 14px 32px rgba(31, 42, 68, 0.1);
+    --management-radius: 14px;
+    --management-transition: 160ms ease;
 }
 
 .management-layout {
@@ -37,8 +46,8 @@
 }
 
 .management-sidebar-header {
-    min-height: 86px;
-    padding: 20px;
+    min-height: 164px;
+    padding: 16px 20px;
 
     display: flex;
     align-items: center;
@@ -51,38 +60,6 @@
     display: flex;
     align-items: center;
     gap: 12px;
-}
-
-.management-logo-icon {
-    width: 40px;
-    height: 40px;
-
-    border-radius: 12px;
-
-    display: flex;
-    justify-content: center;
-    align-items: center;
-
-    background: linear-gradient(135deg,
-            #3157d5,
-            #6280ee);
-
-    font-weight: 800;
-    font-size: 20px;
-}
-
-.management-logo h2 {
-    margin: 0;
-    font-size: 18px;
-    font-weight: 700;
-}
-
-.management-logo span {
-    display: block;
-    margin-top: 3px;
-
-    font-size: 10px;
-    color: #9099aa;
 }
 
 .sidebar-close-button {
@@ -131,7 +108,7 @@
 }
 
 .management-nav-link.active {
-    background: #3157d5;
+    background: var(--management-primary);
     color: #ffffff;
 }
 
@@ -235,14 +212,16 @@
 }
 
 .management-user-avatar {
-    width: 42px;
-    height: 42px;
+    width: 52px;
+    height: 52px;
 
     display: flex;
     justify-content: center;
     align-items: center;
 
     border-radius: 50%;
+    overflow: hidden;
+    flex-shrink: 0;
 
     background: var(--management-primary-soft);
     color: var(--management-primary);
@@ -264,6 +243,13 @@
 
     font-size: 11px;
     color: var(--management-muted);
+}
+
+.management-user-brand-mark {
+    width: 48px;
+    height: 48px;
+    object-fit: contain;
+    object-position: center;
 }
 
 .topbar-password-button {
@@ -302,6 +288,15 @@
     box-shadow: 0 20px 48px rgba(15, 23, 42, 0.2);
 }
 
+.dashboard-drilldown-button {
+    width: 100%;
+    cursor: pointer;
+    text-align: left;
+    color: inherit;
+    font: inherit;
+    appearance: none;
+}
+
 .management-password-form {
     display: grid;
     gap: 16px;
@@ -324,6 +319,23 @@
     border-radius: 10px;
     outline: none;
     font: inherit;
+}
+
+.management-password-form select {
+    width: 100%;
+    min-height: 43px;
+    padding: 10px 36px 10px 12px;
+    border: 1px solid #dbe1e8;
+    border-radius: 9px;
+    background: var(--management-surface, #fff);
+    color: var(--management-text, #111827);
+    font: inherit;
+}
+
+.management-password-form select:focus {
+    border-color: var(--management-primary);
+    outline: none;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--management-primary) 18%, transparent);
 }
 
 .management-password-form input:focus {
@@ -383,6 +395,70 @@
     background: var(--management-surface);
 
     box-shadow: 0 4px 20px rgba(31, 42, 68, 0.04);
+}
+
+.dashboard-kpi-card {
+    min-height: 178px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+}
+
+.dashboard-kpi-card:hover {
+    transform: translateY(-3px);
+    border-color: #8ed8d0;
+    background: #fdfdff;
+    box-shadow: 0 12px 26px rgba(31, 42, 68, 0.1);
+}
+
+.dashboard-kpi-card:active {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(31, 42, 68, 0.1);
+}
+
+.dashboard-kpi-card:focus-visible {
+    outline: none;
+    border-color: var(--management-primary);
+    box-shadow: 0 0 0 4px rgba(15, 157, 145, 0.18), 0 12px 26px rgba(31, 42, 68, 0.1);
+}
+
+.dashboard-kpi-card .stat-card-top {
+    width: 100%;
+}
+
+.dashboard-kpi-label {
+    color: var(--management-muted);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.dashboard-kpi-value {
+    display: block;
+    margin: 6px 0 7px;
+    color: var(--management-text);
+    font-size: 30px;
+    line-height: 1;
+    letter-spacing: -0.8px;
+}
+
+.dashboard-kpi-action {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: auto;
+    padding-top: 13px;
+    color: var(--management-primary);
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.dashboard-kpi-action span {
+    transition: transform 160ms ease;
+}
+
+.dashboard-kpi-card:hover .dashboard-kpi-action span {
+    transform: translateX(3px);
 }
 
 .stat-card-top {
@@ -475,8 +551,44 @@
     font-size: 11px;
 }
 
+.dashboard-panel-message {
+    margin: 16px 0 0;
+    color: var(--management-muted);
+    font-size: 13px;
+    line-height: 1.55;
+}
+
 .attendance-summary-list {
     margin-top: 10px;
+}
+
+.dashboard-drilldown-modal {
+    width: min(100%, 880px);
+    max-height: min(720px, calc(100vh - 40px));
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    overflow: hidden;
+}
+
+.dashboard-drilldown-header {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 21px 22px 16px;
+}
+
+.dashboard-drilldown-content {
+    min-height: 116px;
+    padding: 18px 22px 22px;
+    overflow: auto;
+}
+
+.dashboard-drilldown-status {
+    margin: 0;
+    color: var(--management-muted);
 }
 
 .attendance-summary-item {
@@ -639,12 +751,28 @@
         padding: 17px;
     }
 
+    .dashboard-kpi-card {
+        min-height: 164px;
+    }
+
     .stat-card-top {
         margin-bottom: 14px;
     }
 
     .quick-actions-grid {
         grid-template-columns: 1fr 1fr;
+    }
+
+    .management-modal-backdrop {
+        padding: 12px;
+    }
+
+    .dashboard-drilldown-header {
+        padding: 18px 18px 14px;
+    }
+
+    .dashboard-drilldown-content {
+        padding: 16px 18px 18px;
     }
 }
 
@@ -2184,4 +2312,488 @@
 .reports-page .reports-table td:last-child {
     white-space: normal;
     min-width: 180px;
+}
+
+/* Reporting, chart, and responsive visual system */
+.management-page-header, .reports-results-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
+.reports-page-header { margin-bottom: 20px; }
+.reports-page-header h1, .reports-results-header h2 { margin: 6px 0; color: var(--management-text); }
+.reports-page-header p, .reports-results-header p { margin: 0; color: var(--management-muted); }
+.reports-section-heading { display: flex; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
+.reports-section-heading h3 { margin: 0; font-size: 16px; }
+.reports-section-heading p { margin: 4px 0 0; color: var(--management-muted); font-size: 13px; }
+.reports-loading-note { color: var(--management-muted); font-size: 12px; font-weight: 600; }
+.reports-filter-card { background: var(--management-surface); box-shadow: var(--management-shadow-sm); }
+.reports-form-actions { margin-top: 20px; }
+.reports-empty-state { display: grid; gap: 6px; min-height: 150px; place-content: center; text-align: center; }
+.reports-results-header { margin: 28px 0 16px; }
+.reports-export-actions { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 9px; color: var(--management-muted); font-size: 12px; }
+.reports-results-card { overflow: hidden; }
+.reports-table-header { align-items: center; }
+.reports-page-size { display: flex; align-items: center; gap: 9px; color: var(--management-muted); font-size: 12px; font-weight: 700; }
+.reports-page-size select { min-width: 76px; }
+.reports-pagination { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 20px; border-top: 1px solid var(--management-border); color: var(--management-muted); font-size: 13px; font-weight: 600; }
+.reports-pagination div { display: flex; gap: 8px; }
+.report-status-badge { display: inline-flex; padding: 4px 8px; border-radius: 999px; background: var(--management-surface-secondary); color: var(--management-muted); font-size: 10px; font-weight: 800; letter-spacing: .02em; }
+.status-full_day { background: #e8f7ef; color: var(--management-success); }
+.status-partial_day, .status-insufficient_attendance { background: #fff6e6; color: var(--management-warning); }
+.status-absent { background: #fdecef; color: var(--management-danger); }
+.status-leave, .status-holiday { background: #eeeaff; color: #6246d6; }
+
+.dashboard-charts-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; margin: 0 0 22px; }
+.dashboard-chart-card { min-width: 0; min-height: 270px; padding: 20px; border: 1px solid var(--management-border); border-radius: var(--management-radius); background: var(--management-surface); box-shadow: var(--management-shadow-sm); }
+.dashboard-chart-heading h3 { margin: 0; font-size: 15px; }
+.dashboard-chart-heading p { margin: 5px 0 0; color: var(--management-muted); font-size: 11px; line-height: 1.45; }
+.dashboard-chart-empty { display: grid; min-height: 170px; place-items: center; color: var(--management-muted); text-align: center; font-size: 13px; }
+.attendance-donut-layout { display: flex; align-items: center; justify-content: center; gap: 22px; min-height: 188px; }
+.attendance-donut { display: grid; width: 138px; height: 138px; place-items: center; flex: 0 0 auto; border-radius: 50%; }
+.attendance-donut > div { display: grid; width: 88px; height: 88px; place-content: center; border-radius: 50%; background: var(--management-surface); text-align: center; }
+.attendance-donut strong { font-size: 25px; line-height: 1; }
+.attendance-donut span { margin-top: 4px; color: var(--management-muted); font-size: 10px; font-weight: 700; }
+.attendance-donut-legend { display: grid; gap: 9px; min-width: 112px; margin: 0; padding: 0; list-style: none; }
+.attendance-donut-legend li { display: grid; grid-template-columns: 9px 1fr auto; align-items: center; gap: 7px; color: var(--management-muted); font-size: 11px; }
+.attendance-donut-legend li > span:first-child { width: 8px; height: 8px; border-radius: 50%; }
+.attendance-donut-legend strong { color: var(--management-text); }
+.dashboard-bar-chart { display: flex; align-items: end; min-height: 178px; gap: 10px; padding-top: 12px; }
+.dashboard-bar-item { display: grid; grid-template-rows: 18px 116px auto; flex: 1 1 0; min-width: 24px; gap: 7px; text-align: center; }
+.dashboard-bar-item > strong { color: var(--management-text); font-size: 11px; }
+.dashboard-bar-track { position: relative; overflow: hidden; border-radius: 8px 8px 3px 3px; background: var(--management-primary-soft); }
+.dashboard-bar-fill { position: absolute; right: 0; bottom: 0; left: 0; border-radius: inherit; background: linear-gradient(180deg, #6280ee, var(--management-primary)); transition: height var(--management-transition); }
+.dashboard-bar-item > span { overflow: hidden; color: var(--management-muted); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+
+.management-nav-link, .management-primary-button, .management-secondary-button, .primary-action-btn, .secondary-action-btn, .management-table tbody tr { transition: background-color var(--management-transition), border-color var(--management-transition), box-shadow var(--management-transition), transform var(--management-transition); }
+.management-primary-button:hover, .primary-action-btn:hover { background: var(--management-primary-hover); box-shadow: 0 6px 14px rgba(49, 87, 213, .2); }
+.management-primary-button:focus-visible, .management-secondary-button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px solid rgba(49, 87, 213, .18); outline-offset: 1px; }
+.management-table tbody tr:hover { background: var(--management-surface-secondary); }
+.management-form-section { grid-column: 1 / -1; margin-top: 8px; padding-top: 16px; border-top: 1px solid var(--management-border); }
+.management-form-section h4 { margin: 0; color: var(--management-text); font-size: 14px; }
+.management-form-section p { margin: 4px 0 0; color: var(--management-muted); font-size: 12px; }
+.management-checkbox-row { display: inline-flex !important; align-items: center; gap: 8px; min-height: 42px; margin: 0; cursor: pointer; }
+.management-checkbox-row input { width: 16px !important; min-height: 16px !important; margin: 0; }
+
+@media (max-width: 1100px) { .dashboard-charts-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .dashboard-chart-card:last-child { grid-column: span 2; } }
+@media (max-width: 700px) { .dashboard-charts-grid { grid-template-columns: 1fr; } .dashboard-chart-card:last-child { grid-column: auto; } .reports-results-header, .reports-pagination { align-items: stretch; flex-direction: column; } .reports-export-actions { justify-content: flex-start; } .reports-pagination div { width: 100%; } .reports-pagination button { flex: 1; } }
+@media (max-width: 440px) { .attendance-donut-layout { gap: 14px; } .attendance-donut { width: 120px; height: 120px; } .attendance-donut > div { width: 78px; height: 78px; } .reports-page-size { align-items: flex-start; flex-direction: column; gap: 4px; } }
+
+.profile-card { display: grid; grid-template-columns: 230px minmax(0, 1fr); overflow: hidden; border: 1px solid var(--management-border); border-radius: var(--management-radius); background: var(--management-surface); box-shadow: var(--management-shadow-sm); }
+.profile-summary { display: flex; flex-direction: column; align-items: center; padding: 34px 22px; background: linear-gradient(160deg, var(--management-primary-soft), var(--management-surface-secondary)); text-align: center; }
+.profile-avatar { display: grid; width: 78px; height: 78px; place-items: center; overflow: hidden; border-radius: 50%; background: var(--management-primary); color: white; font-size: 24px; font-weight: 800; }
+.profile-avatar-photo { width: 100%; height: 100%; object-fit: cover; }
+.profile-brand-mark { width: 64px; height: 64px; object-fit: contain; object-position: center; }
+.profile-summary h2 { margin: 15px 0 4px; font-size: 18px; }.profile-summary span { color: var(--management-primary); font-size: 12px; font-weight: 800; }.profile-summary p { margin: 8px 0 0; color: var(--management-muted); font-size: 12px; }
+.profile-content { padding: 28px; }.profile-readonly-grid, .profile-contact-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }.profile-readonly-grid { margin-bottom: 24px; padding-bottom: 22px; border-bottom: 1px solid var(--management-border); }.profile-readonly-grid div, .profile-contact-grid div { display: grid; gap: 4px; }.profile-readonly-grid span, .profile-contact-grid span { color: var(--management-muted); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }.profile-readonly-grid strong, .profile-contact-grid strong { overflow-wrap: anywhere; font-size: 14px; }.profile-full { grid-column: 1 / -1; }.profile-form { margin-top: 4px; }
+@media (max-width: 700px) { .profile-card { grid-template-columns: 1fr; }.profile-summary { padding: 24px; }.profile-content { padding: 20px; }.profile-readonly-grid, .profile-contact-grid { grid-template-columns: 1fr; }.profile-full { grid-column: auto; } }
+
+/* Cohesive teal/navy refinements for the existing management shell. */
+.management-topbar { border-bottom-color: var(--management-border); background: rgba(255, 255, 255, .94); backdrop-filter: blur(10px); }
+.management-nav-link.active { box-shadow: 0 7px 16px rgba(15, 157, 145, .22); }
+.management-nav-link:hover { background: rgba(34, 199, 184, .13); }
+.management-sidebar-footer { border-top-color: rgba(220, 229, 233, .12); }
+.dashboard-stat-card, .dashboard-panel, .management-form-card, .management-table-card, .profile-card { border-radius: var(--management-radius); box-shadow: var(--management-shadow-sm); }
+.dashboard-stat-card, .dashboard-panel { border-color: var(--management-border); }
+.management-table th { background: #f2f8f7; color: #42606a; font-size: 11px; letter-spacing: .035em; text-transform: uppercase; }
+.management-table td { color: var(--management-text); }.management-table td strong { color: var(--management-primary); }
+.management-secondary-button, .secondary-action-btn { border-color: var(--management-border); background: var(--management-surface-secondary); color: var(--management-text); }
+.management-secondary-button:hover, .secondary-action-btn:hover { border-color: #9bd8d2; background: var(--management-primary-soft); color: #08746b; }
+.management-primary-button, .primary-action-btn { background: var(--management-primary); }.management-primary-button:hover, .primary-action-btn:hover { background: var(--management-primary-hover); }
+.dashboard-bar-fill { background: linear-gradient(180deg, #22c7b8, var(--management-primary)); }
+.dashboard-kpi-card:hover { border-color: #8ed8d0; background: #fcfffe; }.dashboard-kpi-card:focus-visible { border-color: var(--management-primary); box-shadow: 0 0 0 4px rgba(15, 157, 145, .18), var(--management-shadow-md); }
+.management-empty-state { color: var(--management-muted); }.management-error, .management-error-message { border-color: #f1c4c4; background: #fff4f4; color: #b83232; }.management-success-message { border-color: #b8e2d1; background: #effaf5; color: var(--management-success); }
+.management-logo { width: 100%; min-width: 0; }.management-sidebar-logo { display: block; width: min(100%, 198px); height: auto; object-fit: contain; object-position: left center; }.management-sidebar .workpulse-logo-fallback { color: #ffffff; }.management-sidebar .workpulse-logo-fallback span { color: rgba(255, 255, 255, .62); }
+
+/* WorkPulse semantic component layer. Default: Ocean Blue light mode. */
+:root {
+    --management-background: var(--wp-bg);
+    --management-surface: var(--wp-surface);
+    --management-surface-secondary: var(--wp-surface-soft);
+    --management-primary: var(--wp-primary);
+    --management-primary-hover: var(--wp-accent);
+    --management-primary-soft: var(--wp-surface-soft);
+    --management-text: var(--wp-text);
+    --management-muted: var(--wp-text-muted);
+    --management-border: var(--wp-border);
+    --management-sidebar: var(--wp-primary-dark);
+    --management-success: var(--wp-success);
+    --management-warning: var(--wp-warning);
+    --management-danger: var(--wp-danger);
+    --wp-chart-present: #0ea5e9;
+    --wp-chart-late: #b45309;
+    --wp-chart-leave: #0369a1;
+    --wp-chart-absent: #b91c1c;
+    --wp-shadow-sm: 0 6px 18px rgba(3, 105, 161, .1);
+    --wp-shadow-md: 0 16px 34px rgba(3, 105, 161, .16);
+}
+
+:root[data-theme="dark"] {
+    --management-background: var(--wp-bg);
+    --management-surface: var(--wp-surface);
+    --management-surface-secondary: var(--wp-surface-soft);
+    --management-primary: var(--wp-primary);
+    --management-primary-hover: var(--wp-accent);
+    --management-primary-soft: var(--wp-surface-soft);
+    --management-text: var(--wp-text);
+    --management-muted: var(--wp-text-muted);
+    --management-border: var(--wp-border);
+    --management-sidebar: #115e59;
+    --management-success: var(--wp-success);
+    --management-warning: var(--wp-warning);
+    --management-danger: var(--wp-danger);
+    --wp-chart-present: #14b8a6;
+    --wp-chart-late: #fbbf24;
+    --wp-chart-leave: #5eead4;
+    --wp-chart-absent: #fca5a5;
+    --wp-shadow-sm: 0 6px 18px rgba(0, 20, 18, .2);
+    --wp-shadow-md: 0 16px 34px rgba(0, 20, 18, .34);
+}
+
+.management-layout, .management-main, .management-content { background: var(--management-background); color: var(--management-text); }
+.management-topbar { border-bottom-color: var(--management-border); background: var(--management-surface); color: var(--management-text); }
+.management-topbar-left h1, .management-user-info strong, .management-page-header h1, .dashboard-welcome-section h2, .management-table-header h3, .reports-page-header h1, .reports-results-header h2 { color: var(--management-text); }
+.management-topbar-left p, .management-user-info span, .management-page-header p, .management-table-header p, .reports-page-header p, .reports-results-header p { color: var(--management-muted); }
+.management-sidebar { background: var(--management-sidebar); }.management-sidebar-header, .management-sidebar-footer { border-color: color-mix(in srgb, var(--wp-highlight) 24%, transparent); }.management-nav-link { color: color-mix(in srgb, var(--wp-text) 70%, transparent); }.management-nav-link:hover { background: color-mix(in srgb, var(--wp-accent) 25%, transparent); color: #ecfeff; }.management-nav-link.active { background: var(--management-primary); color: #0f172a; }.management-nav-link:focus-visible { outline: 3px solid var(--wp-highlight); outline-offset: 2px; }
+.management-theme-toggle { display: grid; width: 40px; height: 40px; place-items: center; border: 1px solid var(--management-border); border-radius: 11px; background: var(--management-surface-secondary); color: var(--management-primary-dark); font: inherit; font-size: 18px; transition: background-color var(--management-transition), border-color var(--management-transition), transform var(--management-transition); }.management-theme-toggle:hover { border-color: var(--management-primary); background: var(--management-primary-soft); transform: translateY(-1px); }.management-theme-toggle:focus-visible { outline: 3px solid var(--wp-focus); outline-offset: 2px; }
+.dashboard-stat-card, .dashboard-panel, .management-form-card, .management-table-card, .profile-card, .dashboard-chart-card, .reports-filter-card, .reports-results-card, .management-password-modal, .dashboard-drilldown-dialog { border-color: var(--management-border); background: var(--management-surface); box-shadow: var(--wp-shadow-sm); color: var(--management-text); }
+.dashboard-stat-card, .dashboard-kpi-card { background: var(--management-surface); }.dashboard-kpi-card:hover { border-color: var(--management-primary); background: var(--management-surface-secondary); box-shadow: var(--wp-shadow-md); }.dashboard-kpi-card:focus-visible { border-color: var(--wp-focus); box-shadow: 0 0 0 4px color-mix(in srgb, var(--wp-focus) 24%, transparent), var(--wp-shadow-md); }
+.management-form-group label, .management-password-form label, .management-table td, .management-table th, .profile-readonly-grid strong, .profile-contact-grid strong { color: var(--management-text); }.management-form-group input, .management-form-group select, .management-form-group textarea, .management-password-form input, .reports-page select, .management-page select, .management-page input, .management-page textarea { border-color: var(--management-border); background: var(--management-background); color: var(--management-text); }.management-form-group input::placeholder, .management-form-group textarea::placeholder, .management-page input::placeholder { color: var(--management-muted); opacity: .75; }.management-form-group input:focus, .management-form-group select:focus, .management-form-group textarea:focus, .management-password-form input:focus, .management-page select:focus, .management-page input:focus, .management-page textarea:focus { border-color: var(--wp-focus); box-shadow: 0 0 0 3px color-mix(in srgb, var(--wp-focus) 22%, transparent); outline: none; }.management-form-group input:disabled, .management-form-group select:disabled, .management-form-group textarea:disabled { opacity: .58; background: var(--management-surface-secondary); }
+.management-table { background: var(--management-surface); }.management-table th { border-color: var(--management-border); background: var(--management-surface-secondary); color: var(--management-primary-dark); }.management-table td { border-color: var(--management-border); }.management-table tbody tr:hover { background: var(--management-surface-secondary); }.management-table-wrapper::-webkit-scrollbar-track { background: var(--management-surface-secondary); }.management-table-wrapper::-webkit-scrollbar-thumb { background: var(--management-border); }
+.management-primary-button, .primary-action-btn { border-color: var(--management-primary); background: var(--management-primary); color: #0f172a; box-shadow: 0 6px 14px color-mix(in srgb, var(--management-primary) 26%, transparent); }.management-primary-button:hover, .primary-action-btn:hover { background: var(--management-primary-hover); }.management-secondary-button, .secondary-action-btn { border-color: var(--management-border); background: var(--management-surface-secondary); color: var(--management-primary-dark); }.management-secondary-button:hover, .secondary-action-btn:hover { border-color: var(--management-primary); background: var(--management-primary-soft); color: var(--management-primary-dark); }.management-action-button.danger, .danger-action-btn, .delete-action-btn { background: var(--wp-danger); color: #fff; }.management-primary-button:focus-visible, .management-secondary-button:focus-visible, .primary-action-btn:focus-visible, .secondary-action-btn:focus-visible { outline: 3px solid var(--wp-focus); outline-offset: 2px; }
+.management-modal-backdrop { background: rgba(3, 105, 161, .38); }.management-error, .management-error-message, .management-form-error { border-color: color-mix(in srgb, var(--wp-danger) 45%, transparent); background: color-mix(in srgb, var(--wp-danger) 12%, var(--management-surface)); color: var(--wp-danger); }.management-success-message { border-color: color-mix(in srgb, var(--wp-success) 45%, transparent); background: color-mix(in srgb, var(--wp-success) 12%, var(--management-surface)); color: var(--wp-success); }.report-status-badge, .management-empty-state, .dashboard-chart-empty { color: var(--management-muted); background: var(--management-surface-secondary); }.attendance-donut > div { background: var(--management-surface); }.dashboard-bar-track { background: var(--management-surface-secondary); }.dashboard-bar-fill { background: linear-gradient(180deg, var(--wp-accent), var(--wp-primary)); }
+
+:root[data-theme="dark"] .management-modal-backdrop { background: rgba(0, 25, 22, .68); }
+:root[data-theme="dark"] .management-nav-link.active, :root[data-theme="dark"] .management-primary-button, :root[data-theme="dark"] .primary-action-btn { color: #062f2b; }
+:root[data-theme="dark"] .topbar-password-button, :root[data-theme="dark"] .management-menu-button { border-color: var(--management-border); background: var(--management-surface-secondary); color: var(--management-text); }
+
+/* Header account menu and sidebar navigation: controls remain compact, legible, and keyboard-visible. */
+.management-user-menu { position: relative; }
+.management-user-trigger {
+    display: inline-flex;
+    min-height: 52px;
+    align-items: center;
+    gap: 10px;
+    border: 1px solid transparent;
+    border-radius: 14px;
+    padding: 4px 8px 4px 4px;
+    background: transparent;
+    color: var(--management-text);
+    font: inherit;
+    text-align: left;
+    transition: background-color var(--management-transition), border-color var(--management-transition), box-shadow var(--management-transition), transform var(--management-transition);
+}
+.management-user-trigger:hover { border-color: var(--management-border); background: var(--management-surface-secondary); }
+.management-user-trigger:active { transform: translateY(1px); }
+.management-user-trigger:focus-visible { outline: 3px solid var(--wp-focus); outline-offset: 2px; }
+.management-user-trigger .management-user-avatar { width: 44px; height: 44px; }
+.management-user-trigger .management-user-info { min-width: 0; }
+.management-user-trigger .management-user-info strong { overflow: hidden; max-width: 160px; text-overflow: ellipsis; white-space: nowrap; }
+.management-user-menu-chevron { color: var(--management-muted); font-size: 18px; line-height: 1; transition: transform var(--management-transition); }
+.management-user-trigger[aria-expanded="true"] .management-user-menu-chevron { transform: rotate(180deg); }
+.management-user-dropdown {
+    position: absolute;
+    z-index: 130;
+    top: calc(100% + 9px);
+    right: 0;
+    display: grid;
+    width: 210px;
+    padding: 7px;
+    border: 1px solid var(--management-border);
+    border-radius: 14px;
+    background: var(--management-surface);
+    box-shadow: var(--wp-shadow-md);
+}
+.management-user-dropdown button {
+    width: 100%;
+    min-height: 40px;
+    border: 0;
+    border-radius: 9px;
+    padding: 0 11px;
+    background: transparent;
+    color: var(--management-text);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    text-align: left;
+    transition: background-color var(--management-transition), color var(--management-transition);
+}
+.management-user-dropdown button:hover, .management-user-dropdown button:focus-visible { background: var(--management-surface-secondary); color: var(--management-primary-dark); outline: none; }
+.management-user-dropdown button:focus-visible { box-shadow: 0 0 0 2px var(--wp-focus); }
+.management-user-menu-divider { height: 1px; margin: 6px 3px; background: var(--management-border); }
+.management-user-dropdown .management-user-logout { color: var(--management-danger); }
+.management-user-dropdown .management-user-logout:hover, .management-user-dropdown .management-user-logout:focus-visible { background: color-mix(in srgb, var(--management-danger) 11%, var(--management-surface)); color: var(--management-danger); }
+.management-sidebar-nav { min-height: 0; padding: 12px; overflow-y: auto; overscroll-behavior: contain; }
+:root[data-theme="light"] .management-nav-link { color: #e0f2fe; }
+:root[data-theme="light"] .management-nav-icon { color: #bae6fd; }
+:root[data-theme="light"] .management-nav-link:hover { background: rgba(56, 189, 248, .26); color: #ffffff; }
+:root[data-theme="light"] .management-nav-link.active { background: #38bdf8; color: #0f172a; box-shadow: 0 8px 18px rgba(2, 132, 199, .28); }
+:root[data-theme="light"] .management-nav-link.active .management-nav-icon { color: #0f172a; }
+
+@media (max-width: 640px) {
+    .management-topbar { min-height: 70px; height: auto; padding: 10px 14px; }
+    .management-topbar-left { min-width: 0; gap: 10px; }
+    .management-topbar-left h1 { font-size: 17px; }
+    .management-topbar-left p { display: none; }
+    .management-topbar-user { gap: 7px; }
+    .management-theme-toggle { width: 36px; height: 36px; }
+    .management-user-trigger { min-height: 40px; padding: 3px; }
+    .management-user-trigger .management-user-avatar { width: 36px; height: 36px; }
+    .management-user-trigger .management-user-info, .management-user-menu-chevron { display: none; }
+    .management-user-dropdown { top: calc(100% + 7px); width: min(210px, calc(100vw - 28px)); }
+}
+
+/* Dark Teal readability repair: content never relies on faint opacity over teal surfaces. */
+:root[data-theme="dark"] {
+    --wp-text-secondary: #c9f7f1;
+    --wp-text-muted: #b9e9e2;
+    --management-muted: var(--wp-text-muted);
+}
+
+:root[data-theme="dark"] .dashboard-welcome-section p,
+:root[data-theme="dark"] .management-topbar-left p,
+:root[data-theme="dark"] .management-user-info span,
+:root[data-theme="dark"] .dashboard-panel-header p,
+:root[data-theme="dark"] .dashboard-panel-message,
+:root[data-theme="dark"] .dashboard-drilldown-status,
+:root[data-theme="dark"] .reports-page-header p,
+:root[data-theme="dark"] .reports-results-header p,
+:root[data-theme="dark"] .management-table-header p,
+:root[data-theme="dark"] .management-table-subtext,
+:root[data-theme="dark"] .profile-summary p,
+:root[data-theme="dark"] .profile-readonly-grid span,
+:root[data-theme="dark"] .profile-contact-grid span,
+:root[data-theme="dark"] .reports-export-actions,
+:root[data-theme="dark"] .reports-page-size,
+:root[data-theme="dark"] .reports-pagination,
+:root[data-theme="dark"] .management-pagination,
+:root[data-theme="dark"] .management-page-size-control { color: var(--wp-text-secondary); opacity: 1; }
+
+:root[data-theme="dark"] .dashboard-kpi-label,
+:root[data-theme="dark"] .dashboard-stat-card p,
+:root[data-theme="dark"] .stat-description { color: var(--wp-text-secondary); opacity: 1; }
+:root[data-theme="dark"] .dashboard-kpi-value,
+:root[data-theme="dark"] .dashboard-stat-card h3,
+:root[data-theme="dark"] .dashboard-panel-header h3,
+:root[data-theme="dark"] .dashboard-chart-heading h3,
+:root[data-theme="dark"] .dashboard-chart-heading strong,
+:root[data-theme="dark"] .dashboard-bar-item > strong,
+:root[data-theme="dark"] .attendance-donut strong { color: #ecfeff; }
+:root[data-theme="dark"] .dashboard-kpi-action,
+:root[data-theme="dark"] .dashboard-kpi-action:hover,
+:root[data-theme="dark"] .management-table a,
+:root[data-theme="dark"] .management-page a { color: #5eead4; }
+:root[data-theme="dark"] .dashboard-kpi-action:focus-visible,
+:root[data-theme="dark"] .management-table a:focus-visible,
+:root[data-theme="dark"] .management-page a:focus-visible { outline: 3px solid #5eead4; outline-offset: 3px; border-radius: 3px; }
+
+:root[data-theme="dark"] .stat-badge,
+:root[data-theme="dark"] .status-badge,
+:root[data-theme="dark"] .management-status-badge { border: 1px solid rgba(94, 234, 212, .42); background: rgba(94, 234, 212, .2); color: #ecfeff; }
+:root[data-theme="dark"] .stat-badge { color: #ecfeff; }
+:root[data-theme="dark"] .status-badge.status-active,
+:root[data-theme="dark"] .management-status-badge.active { border-color: rgba(94, 234, 212, .52); background: rgba(20, 184, 166, .28); color: #ecfeff; }
+:root[data-theme="dark"] .status-badge.status-inactive,
+:root[data-theme="dark"] .management-status-badge.inactive { border-color: rgba(252, 165, 165, .58); background: rgba(185, 28, 28, .28); color: #ffe4e6; }
+:root[data-theme="dark"] .report-status-badge.status-full_day { background: rgba(20, 184, 166, .28); color: #ecfeff; }
+:root[data-theme="dark"] .report-status-badge.status-partial_day,
+:root[data-theme="dark"] .report-status-badge.status-insufficient_attendance { background: rgba(180, 83, 9, .34); color: #fff7ed; }
+:root[data-theme="dark"] .report-status-badge.status-absent { background: rgba(185, 28, 28, .34); color: #ffe4e6; }
+:root[data-theme="dark"] .report-status-badge.status-leave,
+:root[data-theme="dark"] .report-status-badge.status-holiday { background: rgba(45, 212, 191, .2); color: #ecfeff; }
+
+:root[data-theme="dark"] .quick-actions-grid button { border-color: rgba(94, 234, 212, .38); background: #0d3b36; color: #ecfeff; box-shadow: none; }
+:root[data-theme="dark"] .quick-actions-grid button span { color: #5eead4; }
+:root[data-theme="dark"] .quick-actions-grid button:hover { border-color: #5eead4; background: rgba(20, 184, 166, .23); color: #ecfeff; }
+:root[data-theme="dark"] .quick-actions-grid button:focus-visible { outline: 3px solid #5eead4; outline-offset: 3px; }
+
+:root[data-theme="dark"] .dashboard-chart-heading p,
+:root[data-theme="dark"] .dashboard-chart-empty,
+:root[data-theme="dark"] .attendance-donut span,
+:root[data-theme="dark"] .attendance-donut-legend li,
+:root[data-theme="dark"] .dashboard-bar-item > span,
+:root[data-theme="dark"] .attendance-donut-legend strong { color: var(--wp-text-secondary); opacity: 1; }
+:root[data-theme="dark"] .attendance-donut-legend strong { color: #ecfeff; }
+:root[data-theme="dark"] .dashboard-chart-empty,
+:root[data-theme="dark"] .management-empty-state,
+:root[data-theme="dark"] .reports-empty-state { background: transparent; color: var(--wp-text-secondary); opacity: 1; }
+
+:root[data-theme="dark"] .management-form-group label,
+:root[data-theme="dark"] .management-password-form label,
+:root[data-theme="dark"] .management-checkbox-row,
+:root[data-theme="dark"] .management-info-box,
+:root[data-theme="dark"] .management-page-size-control { color: #ecfeff; }
+:root[data-theme="dark"] .management-form-group input,
+:root[data-theme="dark"] .management-form-group select,
+:root[data-theme="dark"] .management-form-group textarea,
+:root[data-theme="dark"] .management-password-form input,
+:root[data-theme="dark"] .management-password-form select,
+:root[data-theme="dark"] .management-search-input,
+:root[data-theme="dark"] .management-checkbox-row,
+:root[data-theme="dark"] .management-action-button { border-color: rgba(94, 234, 212, .42); background: #0d3b36; color: #ecfeff; }
+:root[data-theme="dark"] .management-form-group input::placeholder,
+:root[data-theme="dark"] .management-form-group textarea::placeholder,
+:root[data-theme="dark"] .management-search-input::placeholder { color: #b9e9e2; opacity: .88; }
+:root[data-theme="dark"] .management-form-group input:disabled,
+:root[data-theme="dark"] .management-form-group select:disabled,
+:root[data-theme="dark"] .management-form-group textarea:disabled { color: #c9f7f1; opacity: .74; }
+:root[data-theme="dark"] .management-action-button:hover { border-color: #5eead4; background: rgba(20, 184, 166, .23); color: #ecfeff; }
+
+:root[data-theme="dark"] .management-table-wrapper { border-color: rgba(94, 234, 212, .35); }
+:root[data-theme="dark"] .management-table { background: #115e59; }
+:root[data-theme="dark"] .management-table th { background: #0d3b36; color: #ecfeff; }
+:root[data-theme="dark"] .management-table td { color: #ecfeff; border-color: rgba(94, 234, 212, .24); }
+:root[data-theme="dark"] .management-table td strong { color: #5eead4; }
+:root[data-theme="dark"] .management-table tbody tr:hover { background: rgba(94, 234, 212, .12); }
+:root[data-theme="dark"] .management-secondary-button,
+:root[data-theme="dark"] .secondary-action-btn,
+:root[data-theme="dark"] .topbar-password-button { border-color: rgba(94, 234, 212, .45); background: #0d3b36; color: #ecfeff; }
+:root[data-theme="dark"] .management-secondary-button:hover,
+:root[data-theme="dark"] .secondary-action-btn:hover,
+:root[data-theme="dark"] .topbar-password-button:hover { border-color: #5eead4; background: rgba(20, 184, 166, .23); color: #ecfeff; }
+:root[data-theme="dark"] .management-primary-button,
+:root[data-theme="dark"] .primary-action-btn { color: #062f2b; font-weight: 800; }
+:root[data-theme="dark"] .management-primary-button:disabled,
+:root[data-theme="dark"] .secondary-action-btn:disabled,
+:root[data-theme="dark"] .management-secondary-button:disabled { color: #b9e9e2; opacity: .72; }
+
+/* Route-specific management refinements: keep compact KPI summaries usable at every requested mobile width. */
+.admin-list-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.admin-list-controls { display: flex; align-items: flex-end; gap: 8px; min-width: min(100%, 380px); }
+.admin-search-control { display: grid; min-width: 0; flex: 1 1 260px; gap: 5px; color: var(--management-muted); font-size: 11px; font-weight: 700; }
+.admin-search-control input { width: 100%; min-width: 0; min-height: 40px; border: 1px solid var(--management-border); border-radius: 10px; padding: 0 11px; background: var(--management-background); color: var(--management-text); font: inherit; font-size: 13px; }
+.admin-search-control input:focus { border-color: var(--wp-focus); outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--wp-focus) 22%, transparent); }
+.admin-search-control input::placeholder { color: var(--management-muted); opacity: .82; }
+.admin-search-clear { min-height: 40px; padding: 0 12px; white-space: nowrap; }
+.admin-search-empty { display: grid; min-height: 136px; place-content: center; justify-items: center; gap: 12px; text-align: center; }
+
+@media (max-width: 600px) {
+    .dashboard-stat-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+    }
+
+    .dashboard-stat-grid > *,
+    .attendance-management-summary-grid > *,
+    .reports-summary-grid > * { min-width: 0; }
+
+    .dashboard-stat-card {
+        min-width: 0;
+        padding: 14px;
+    }
+
+    .dashboard-kpi-card { min-height: 154px; }
+    .dashboard-stat-card .stat-card-top { gap: 8px; margin-bottom: 12px; }
+    .dashboard-stat-card .stat-icon { width: 34px; height: 34px; flex: 0 0 auto; font-size: 16px; }
+    .dashboard-stat-card .stat-badge { max-width: 58%; padding: 4px 6px; overflow-wrap: anywhere; text-align: right; line-height: 1.25; }
+    .dashboard-stat-card p, .dashboard-kpi-label { overflow-wrap: anywhere; font-size: 11px; line-height: 1.35; }
+    .dashboard-stat-card h3, .dashboard-kpi-value { margin: 5px 0 6px; font-size: 25px; }
+    .stat-description { overflow-wrap: anywhere; font-size: 10px; line-height: 1.35; }
+    .dashboard-kpi-action { flex-wrap: wrap; padding-top: 10px; line-height: 1.35; }
+
+    .attendance-management-summary-grid,
+    .reports-summary-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+    }
+
+    .attendance-management-summary-grid .attendance-summary-card,
+    .reports-summary-grid .attendance-summary-card { min-width: 0; padding: 13px; gap: 7px; }
+    .attendance-management-summary-grid .attendance-summary-card span,
+    .reports-summary-grid .attendance-summary-card span { overflow-wrap: anywhere; line-height: 1.35; }
+    .attendance-management-summary-grid .attendance-summary-card strong,
+    .reports-summary-grid .attendance-summary-card strong { font-size: 22px; line-height: 1.1; }
+
+    .admin-list-header { align-items: stretch; flex-direction: column; }
+    .admin-list-controls { width: 100%; min-width: 0; align-items: flex-end; }
+}
+
+@media (max-width: 380px) {
+    .dashboard-stat-grid,
+    .attendance-management-summary-grid,
+    .reports-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+    .dashboard-stat-card { padding: 12px; }
+    .dashboard-stat-card h3, .dashboard-kpi-value { font-size: 23px; }
+    .attendance-management-summary-grid .attendance-summary-card,
+    .reports-summary-grid .attendance-summary-card { padding: 12px; }
+    .admin-list-controls { align-items: stretch; flex-direction: column; }
+    .admin-search-clear { width: 100%; }
+}
+
+/* Attendance photo inspection stays compact in the table and expands only in a dialog. */
+.management-table-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 18px; }
+.attendance-page-size-control { flex: 0 0 auto; display: grid; gap: 6px; text-align: right; white-space: nowrap; }
+.attendance-page-size-control select { min-height: 38px; min-width: 78px; }
+.attendance-photo-cell { min-width: 104px; white-space: nowrap; }
+.attendance-photo-view-button { min-height: 32px; border: 1px solid var(--management-border); border-radius: 8px; padding: 5px 11px; background: var(--management-surface-secondary); color: var(--management-primary-dark); font: inherit; font-size: 12px; font-weight: 750; cursor: pointer; transition: border-color var(--management-transition), background var(--management-transition), transform var(--management-transition); }
+.attendance-photo-view-button:hover { border-color: var(--management-primary); background: var(--management-primary-soft); transform: translateY(-1px); }
+.attendance-photo-view-button:focus-visible, .attendance-photo-close:focus-visible { outline: 3px solid var(--wp-focus); outline-offset: 2px; }
+.attendance-photo-unavailable { color: var(--management-muted); font-size: 12px; }
+.management-table-footer.attendance-pagination-footer { display: flex; align-items: center; justify-content: space-between; gap: 16px; width: 100%; }
+.attendance-pagination-info { color: var(--management-muted); font-size: 13px; font-weight: 650; white-space: nowrap; }
+.attendance-pagination-actions { display: flex; flex: 0 0 auto; align-items: center; gap: 10px; }
+.attendance-photo-backdrop { padding: 20px; }
+.attendance-photo-modal { width: min(760px, 100%); max-height: calc(100vh - 40px); overflow: auto; border: 1px solid var(--management-border); border-radius: var(--management-radius); background: var(--management-surface); box-shadow: var(--wp-shadow-lg); color: var(--management-text); }
+.attendance-photo-modal-header { display: flex; justify-content: space-between; gap: 18px; padding: 20px 22px 16px; border-bottom: 1px solid var(--management-border); }
+.attendance-photo-modal-header p { margin: 0 0 4px; color: var(--management-primary-dark); font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.attendance-photo-modal-header h3 { margin: 0; font-size: 19px; }.attendance-photo-modal-header span { color: var(--management-muted); font-size: 13px; }
+.attendance-photo-close { width: 36px; height: 36px; border: 1px solid var(--management-border); border-radius: 9px; background: var(--management-surface-secondary); color: var(--management-text); font-size: 25px; line-height: 1; cursor: pointer; }
+.attendance-photo-preview { display: block; width: auto; max-width: calc(100% - 40px); max-height: min(68vh, 620px); margin: 20px auto; border-radius: 10px; object-fit: contain; }
+@media (max-width: 600px) { .management-table-header { align-items: stretch; flex-direction: column; }.attendance-page-size-control { text-align: left; justify-items: start; }.management-table-footer.attendance-pagination-footer { flex-wrap: wrap; }.attendance-pagination-actions { margin-left: auto; }.attendance-photo-modal-header { padding: 16px; }.attendance-photo-preview { max-width: calc(100% - 24px); max-height: 62vh; margin: 12px auto; } }
+
+/* Dashboard visualization refinement: real attendance data with scoped, theme-aware presentation. */
+.attendance-distribution-card { min-height: 296px; }
+.dashboard-quick-actions-only { grid-template-columns: minmax(0, 1fr); }
+.attendance-donut-layout { display: grid; grid-template-columns: minmax(150px, auto) minmax(128px, 1fr); align-items: center; justify-content: center; gap: 26px; min-height: 202px; padding-top: 12px; }
+.attendance-donut { position: relative; display: grid; width: 170px; height: 170px; place-items: center; border-radius: 50%; background: transparent; }
+.attendance-donut svg { width: 100%; height: 100%; overflow: visible; }
+.attendance-donut-track, .attendance-donut-segment { fill: none; stroke-width: 18; }
+.attendance-donut-track { stroke: color-mix(in srgb, var(--management-border) 58%, var(--management-surface-secondary)); }
+.attendance-donut-segment { stroke-linecap: round; transition: stroke-dasharray var(--management-transition), stroke-dashoffset var(--management-transition); }
+.attendance-donut .attendance-donut-center { position: absolute; inset: 0; display: grid; width: 84px; height: 84px; place-content: center; margin: auto; border-radius: 50%; background: var(--management-surface); text-align: center; }
+.attendance-donut-center strong { color: var(--management-text); font-size: 28px; line-height: 1; letter-spacing: -.04em; }
+.attendance-donut-center span { margin-top: 5px; color: var(--management-muted); font-size: 10px; font-weight: 800; letter-spacing: .03em; text-transform: uppercase; }
+.attendance-donut-legend { gap: 10px; min-width: 0; }
+.attendance-donut-legend li { grid-template-columns: 10px minmax(0, 1fr) auto; gap: 8px; min-width: 0; padding: 2px 0; font-size: 12px; }
+.attendance-donut-legend li > span:nth-child(2) { overflow-wrap: anywhere; }
+.attendance-donut-legend li > span:first-child { width: 9px; height: 9px; }
+.attendance-donut-legend strong { font-size: 13px; }
+.attendance-late-indicator { margin-top: 2px; padding-top: 10px !important; border-top: 1px solid var(--management-border); }
+
+.department-attendance-card { min-height: 296px; }
+.department-attendance-list { display: grid; max-height: 276px; gap: 11px; margin-top: 18px; padding: 2px 4px 2px 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-color: var(--management-border) transparent; }
+.department-attendance-row { display: grid; grid-template-columns: minmax(118px, 1.05fr) minmax(88px, 1.65fr) minmax(24px, auto); align-items: center; gap: 10px; min-width: 0; min-height: 32px; }
+.department-attendance-name { overflow: hidden; color: var(--management-text); font-size: 12px; font-weight: 700; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
+.department-attendance-track { display: block; height: 11px; overflow: hidden; border-radius: 999px; background: var(--management-surface-secondary); }
+.department-attendance-fill { display: block; min-width: 0; height: 100%; border-radius: inherit; background: var(--wp-chart-present); transition: width var(--management-transition); }
+.department-attendance-row strong { min-width: 24px; color: var(--management-text); font-size: 13px; text-align: right; }
+.department-attendance-list::-webkit-scrollbar { width: 7px; }
+.department-attendance-list::-webkit-scrollbar-thumb { border-radius: 999px; background: var(--management-border); }
+
+:root[data-theme="dark"] .attendance-donut .attendance-donut-center { background: var(--management-surface); }
+:root[data-theme="dark"] .attendance-donut-center strong, :root[data-theme="dark"] .department-attendance-name, :root[data-theme="dark"] .department-attendance-row strong { color: #ecfeff; }
+:root[data-theme="dark"] .attendance-donut-center span { color: var(--wp-text-secondary); }
+:root[data-theme="dark"] .attendance-donut-track, :root[data-theme="dark"] .department-attendance-track { background: rgba(94, 234, 212, .15); stroke: rgba(94, 234, 212, .15); }
+:root[data-theme="dark"] .attendance-late-indicator { border-top-color: rgba(94, 234, 212, .32); }
+
+@media (max-width: 700px) {
+    .dashboard-chart-card { min-height: 0; }
+    .attendance-distribution-card, .department-attendance-card { min-height: 282px; }
+    .department-attendance-list { max-height: 258px; }
+}
+
+@media (max-width: 430px) {
+    .dashboard-chart-card { padding: 16px; }
+    .attendance-donut-layout { grid-template-columns: 1fr; justify-items: center; gap: 16px; min-height: 0; }
+    .attendance-donut { width: 154px; height: 154px; }
+    .attendance-donut .attendance-donut-center { width: 76px; height: 76px; }
+    .attendance-donut-legend { width: min(100%, 260px); grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 14px; row-gap: 7px; }
+    .attendance-donut-legend li { grid-template-columns: 9px minmax(0, 1fr) auto; gap: 6px; font-size: 11px; }
+    .attendance-late-indicator { margin-top: 0; padding-top: 2px !important; border-top: 0; }
+    .department-attendance-list { max-height: 244px; gap: 10px; }
+    .department-attendance-row { grid-template-columns: minmax(98px, 1fr) minmax(64px, 1.2fr) 24px; gap: 8px; }
+    .department-attendance-name { font-size: 11px; }
+}
+
+@media (max-width: 380px) {
+    .attendance-donut-legend { column-gap: 9px; }
+    .attendance-donut-legend li { font-size: 10px; }
+    .department-attendance-row { grid-template-columns: minmax(90px, 1fr) minmax(54px, 1fr) 22px; gap: 7px; }
 }

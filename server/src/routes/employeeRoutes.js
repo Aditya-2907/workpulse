@@ -8,6 +8,8 @@ const {
     updateEmployee,
     transferEmployeeBranch,
 } = require("../controllers/employeeController");
+const { downloadTemplate, previewImport, confirmImport } = require("../controllers/employeeImportController");
+const { uploadEmployeeImport } = require("../middleware/importUploadMiddleware");
 
 const {
     authenticate,
@@ -25,6 +27,10 @@ router.use(
 );
 
 router.post("/", createEmployee);
+
+router.get("/import-template", allowRoles("SUPER_ADMIN"), downloadTemplate);
+router.post("/import/preview", allowRoles("SUPER_ADMIN"), uploadEmployeeImport.single("file"), previewImport);
+router.post("/import/confirm", allowRoles("SUPER_ADMIN"), confirmImport);
 
 router.get("/", getEmployees);
 

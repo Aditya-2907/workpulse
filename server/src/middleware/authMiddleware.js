@@ -25,6 +25,7 @@ const authenticate = async (req, res, next) => {
           role,
           account_status,
           branch_id,
+          must_change_password,
           token_version
        FROM users
        WHERE id = ?
@@ -55,6 +56,20 @@ const authenticate = async (req, res, next) => {
             });
         }
 
+        const isForcedPasswordChangeRequest =
+            req.method === "PATCH" &&
+            req.originalUrl.split("?")[0] ===
+                "/api/auth/management/force-password-change";
+
+        if (user.must_change_password && !isForcedPasswordChangeRequest) {
+            return res.status(403).json({
+                success: false,
+                code: "PASSWORD_CHANGE_REQUIRED",
+                mustChangePassword: true,
+                message: "You must set a new password before accessing management features.",
+            });
+        }
+
         req.user = {
             id: user.id,
             fullName: user.full_name,
@@ -62,6 +77,7 @@ const authenticate = async (req, res, next) => {
             email: user.email,
             role: user.role,
             branchId: user.branch_id,
+            mustChangePassword: Boolean(user.must_change_password),
         };
 
         next();

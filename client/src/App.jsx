@@ -19,6 +19,12 @@ import Attendance from "./pages/Attendance";
 import Leaves from "./pages/Leaves";
 import Holidays from "./pages/Holidays";
 import Reports from "./pages/Reports";
+import Profile from "./pages/Profile";
+import ForcePasswordChange from "./pages/ForcePasswordChange";
+import AlertCenter from "./pages/AlertCenter";
+import AuditLogs from "./pages/AuditLogs";
+import OrganizationSettings from "./pages/OrganizationSettings";
+import EmployeeImport from "./pages/EmployeeImport";
 
 function App() {
   return (
@@ -32,6 +38,18 @@ function App() {
         <Route
           path="/management/login"
           element={<ManagementLogin />}
+        />
+
+        <Route
+          path="/management/force-password-change"
+          element={
+            <ProtectedRoute
+              allowedRoles={["ADMIN"]}
+              allowPasswordChangeRequired
+            >
+              <ForcePasswordChange />
+            </ProtectedRoute>
+          }
         />
 
         <Route
@@ -70,6 +88,9 @@ function App() {
             </ProtectedRoute>
           }
         />
+
+        <Route path="/super-admin/profile" element={<ProtectedRoute allowedRoles={["SUPER_ADMIN"]}><Profile /></ProtectedRoute>} />
+        <Route path="/admin/profile" element={<ProtectedRoute allowedRoles={["ADMIN"]}><Profile /></ProtectedRoute>} />
 
         <Route
           path="/super-admin/departments"
@@ -188,6 +209,12 @@ function App() {
             </ProtectedRoute>
           }
         />
+
+        <Route path="/super-admin/alerts" element={<ProtectedRoute allowedRoles={["SUPER_ADMIN"]}><AlertCenter /></ProtectedRoute>} />
+        <Route path="/admin/alerts" element={<ProtectedRoute allowedRoles={["ADMIN"]}><AlertCenter /></ProtectedRoute>} />
+        <Route path="/super-admin/audit-logs" element={<ProtectedRoute allowedRoles={["SUPER_ADMIN"]}><AuditLogs /></ProtectedRoute>} />
+        <Route path="/super-admin/settings" element={<ProtectedRoute allowedRoles={["SUPER_ADMIN"]}><OrganizationSettings /></ProtectedRoute>} />
+        <Route path="/super-admin/employees/import" element={<ProtectedRoute allowedRoles={["SUPER_ADMIN"]}><EmployeeImport /></ProtectedRoute>} />
 
         <Route
           path="*"

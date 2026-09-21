@@ -6,6 +6,15 @@ const seedSuperAdmin = require("./utils/seedSuperAdmin");
 
 const PORT = process.env.PORT || 5000;
 
+process.on("unhandledRejection", (reason) => {
+    console.error("Unhandled promise rejection", { message: reason instanceof Error ? reason.message : "Unknown rejection" });
+});
+
+process.on("uncaughtException", (error) => {
+    console.error("Uncaught exception", { message: error.message });
+    process.exit(1);
+});
+
 const startServer = async () => {
     try {
         const connection = await db.getConnection();
