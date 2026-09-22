@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
     attendanceLogin,
@@ -36,6 +36,10 @@ function AttendanceLogin() {
     const videoRef = useRef(null);
     const canvasRef = useRef(null);
     const cameraStreamRef = useRef(null);
+
+    useEffect(() => {
+        document.title = employeeData ? "WorkPulse - Attendance" : "WorkPulse - Login";
+    }, [employeeData]);
 
     // =====================================================
     // PHONE LOGIN

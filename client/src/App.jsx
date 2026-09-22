@@ -3,7 +3,9 @@ import {
   Routes,
   Route,
   Navigate,
+  useLocation,
 } from "react-router-dom";
+import { useEffect } from "react";
 
 import AttendanceLogin from "./pages/AttendanceLogin";
 import ManagementLogin from "./pages/ManagementLogin";
@@ -26,9 +28,50 @@ import AuditLogs from "./pages/AuditLogs";
 import OrganizationSettings from "./pages/OrganizationSettings";
 import EmployeeImport from "./pages/EmployeeImport";
 
+const PAGE_TITLES = {
+  "/": "Login",
+  "/management/login": "Login",
+  "/management/force-password-change": "Change Password",
+  "/super-admin/dashboard": "Dashboard",
+  "/admin/dashboard": "Dashboard",
+  "/super-admin/profile": "My Profile",
+  "/admin/profile": "My Profile",
+  "/super-admin/branches": "Branches",
+  "/super-admin/departments": "Departments",
+  "/super-admin/admins": "Admins",
+  "/admin/admin-request": "Admin Request",
+  "/super-admin/employees": "Employees",
+  "/admin/employees": "Employees",
+  "/super-admin/employees/import": "Import Employees",
+  "/super-admin/attendance": "Attendance",
+  "/admin/attendance": "Attendance",
+  "/employee/attendance": "Attendance",
+  "/super-admin/leaves": "Leaves",
+  "/admin/leaves": "Leaves",
+  "/super-admin/holidays": "Holidays",
+  "/super-admin/reports": "Reports",
+  "/admin/reports": "Reports",
+  "/super-admin/alerts": "Alerts",
+  "/admin/alerts": "Alerts",
+  "/super-admin/audit-logs": "Audit Logs",
+  "/super-admin/settings": "Organization Settings",
+};
+
+function RouteTitle() {
+  const { pathname } = useLocation();
+  const pageTitle = PAGE_TITLES[pathname];
+
+  useEffect(() => {
+    document.title = pageTitle ? `WorkPulse - ${pageTitle}` : "WorkPulse";
+  }, [pageTitle]);
+
+  return null;
+}
+
 function App() {
   return (
     <BrowserRouter>
+      <RouteTitle />
       <Routes>
         <Route
           path="/"
