@@ -1,4 +1,5 @@
 const db = require("../config/db");
+const { writeAuditLog } = require("../services/auditService");
 
 // Start Aditya - Branch weekly off support
 
@@ -239,6 +240,20 @@ const createBranch = async (req, res) => {
 
         // End Aditya
 
+        await writeAuditLog(connection, {
+            actorId: req.user.id,
+            action: "BRANCH_CREATED",
+            entityType: "BRANCH",
+            entityId: result.insertId,
+            newData: {
+                branchCode,
+                branchName: String(branchName).trim(),
+                status: "ACTIVE",
+                weeklyOffs: normalizedWeeklyOffs,
+            },
+            req,
+        });
+
         await connection.commit();
 
         return res.status(201).json({
@@ -393,6 +408,8 @@ const getBranchById = async (
 };
 
 const updateBranch = async (req, res) => {
+    let connection;
+
     try {
         const { id } = req.params;
 
@@ -405,15 +422,20 @@ const updateBranch = async (req, res) => {
             weeklyOffs,
         } = req.body;
 
-        const [branches] = await db.query(
-            `SELECT id
+        connection = await db.getConnection();
+        await connection.beginTransaction();
+
+        const [branches] = await connection.query(
+            `SELECT id, branch_code AS branchCode, branch_name AS branchName,
+                    address, pincode, latitude, longitude, status
              FROM branches
              WHERE id = ?
-             LIMIT 1`,
+             LIMIT 1 FOR UPDATE`,
             [id]
         );
 
         if (branches.length === 0) {
+            await connection.rollback();
             return res.status(404).json({
                 success: false,
                 message:
@@ -428,6 +450,7 @@ const updateBranch = async (req, res) => {
             latitude === undefined ||
             longitude === undefined
         ) {
+            await connection.rollback();
             return res.status(400).json({
                 success: false,
                 message:
@@ -443,6 +466,7 @@ const updateBranch = async (req, res) => {
         if (
             normalizedWeeklyOffs === null
         ) {
+            await connection.rollback();
             return res.status(400).json({
                 success: false,
                 message:
@@ -452,7 +476,12 @@ const updateBranch = async (req, res) => {
 
         // End Aditya
 
-        await db.query(
+        const [oldWeeklyOffs] = await connection.query(
+            `SELECT weekday FROM branch_weekly_offs WHERE branch_id = ? ORDER BY weekday`,
+            [id]
+        );
+
+        await connection.query(
             `UPDATE branches
              SET
                 branch_name = ?,
@@ -473,7 +502,7 @@ const updateBranch = async (req, res) => {
 
         // Start Aditya - Replace weekly offs
 
-        await db.query(
+        await connection.query(
             `DELETE FROM branch_weekly_offs
              WHERE branch_id = ?`,
             [id]
@@ -481,21 +510,35 @@ const updateBranch = async (req, res) => {
 
         await saveWeeklyOffs(
             id,
-            normalizedWeeklyOffs
+            normalizedWeeklyOffs,
+            connection
         );
 
-        const [debugWeeklyOffs] = await db.query(
-            `SELECT
-            id,
-            branch_id AS branchId,
-            weekday
-            FROM branch_weekly_offs
-            WHERE branch_id = ?
-            ORDER BY id`,
-            [id]
-        );
+        await writeAuditLog(connection, {
+            actorId: req.user.id,
+            action: "BRANCH_UPDATED",
+            entityType: "BRANCH",
+            entityId: Number(id),
+            oldData: {
+                ...branches[0],
+                weeklyOffs: oldWeeklyOffs.map((row) => row.weekday),
+            },
+            newData: {
+                branchCode: branches[0].branchCode,
+                branchName: String(branchName).trim(),
+                address: String(address).trim(),
+                pincode: String(pincode).trim(),
+                latitude,
+                longitude,
+                status: branches[0].status,
+                weeklyOffs: normalizedWeeklyOffs,
+            },
+            req,
+        });
 
         // End Aditya
+
+        await connection.commit();
 
         return res.status(200).json({
             success: true,
@@ -508,6 +551,7 @@ const updateBranch = async (req, res) => {
             // End Aditya
         });
     } catch (error) {
+        if (connection) await connection.rollback();
         console.error(
             "Update branch error:",
             error
@@ -518,6 +562,8 @@ const updateBranch = async (req, res) => {
             message:
                 "Internal server error",
         });
+    } finally {
+        if (connection) connection.release();
     }
 };
 
@@ -525,6 +571,8 @@ const updateBranchStatus = async (
     req,
     res
 ) => {
+    let connection;
+
     try {
         const { id } = req.params;
         const { status } = req.body;
@@ -542,15 +590,19 @@ const updateBranchStatus = async (
             });
         }
 
-        const [branches] = await db.query(
-            `SELECT id
+        connection = await db.getConnection();
+        await connection.beginTransaction();
+
+        const [branches] = await connection.query(
+            `SELECT id, branch_code AS branchCode, branch_name AS branchName, status
              FROM branches
              WHERE id = ?
-             LIMIT 1`,
+             LIMIT 1 FOR UPDATE`,
             [id]
         );
 
         if (branches.length === 0) {
+            await connection.rollback();
             return res.status(404).json({
                 success: false,
                 message:
@@ -558,12 +610,24 @@ const updateBranchStatus = async (
             });
         }
 
-        await db.query(
+        await connection.query(
             `UPDATE branches
              SET status = ?
              WHERE id = ?`,
             [status, id]
         );
+
+        await writeAuditLog(connection, {
+            actorId: req.user.id,
+            action: "BRANCH_STATUS_CHANGED",
+            entityType: "BRANCH",
+            entityId: Number(id),
+            oldData: { ...branches[0] },
+            newData: { ...branches[0], status },
+            req,
+        });
+
+        await connection.commit();
 
         return res.status(200).json({
             success: true,
@@ -571,6 +635,7 @@ const updateBranchStatus = async (
                 `Branch marked as ${status}`,
         });
     } catch (error) {
+        if (connection) await connection.rollback();
         console.error(
             "Update branch status error:",
             error
@@ -581,6 +646,8 @@ const updateBranchStatus = async (
             message:
                 "Internal server error",
         });
+    } finally {
+        if (connection) connection.release();
     }
 };
 

@@ -1,4 +1,5 @@
 const pool = require("../config/db");
+const { writeAuditLog } = require("../services/auditService");
 
 // ======================================================
 // GET ALL HOLIDAYS
@@ -68,6 +69,8 @@ const getHolidays = async (req, res) => {
 // SUPER ADMIN ONLY
 // ======================================================
 const createHoliday = async (req, res) => {
+    let connection;
+
     try {
         const {
             holidayDate,
@@ -97,7 +100,10 @@ const createHoliday = async (req, res) => {
             });
         }
 
-        const [existing] = await pool.query(
+        connection = await pool.getConnection();
+        await connection.beginTransaction();
+
+        const [existing] = await connection.query(
             `
             SELECT id
             FROM holidays
@@ -108,6 +114,7 @@ const createHoliday = async (req, res) => {
         );
 
         if (existing.length > 0) {
+            await connection.rollback();
             return res.status(409).json({
                 success: false,
                 message:
@@ -115,7 +122,7 @@ const createHoliday = async (req, res) => {
             });
         }
 
-        const [result] = await pool.query(
+        const [result] = await connection.query(
             `
             INSERT INTO holidays (
                 holiday_date,
@@ -131,7 +138,16 @@ const createHoliday = async (req, res) => {
             ]
         );
 
-        const [rows] = await pool.query(
+        await writeAuditLog(connection, {
+            actorId: req.user.id,
+            action: "HOLIDAY_CREATED",
+            entityType: "HOLIDAY",
+            entityId: result.insertId,
+            newData: { holidayDate, purpose: String(purpose).trim() },
+            req,
+        });
+
+        const [rows] = await connection.query(
             `
             SELECT
                 h.id,
@@ -150,6 +166,8 @@ const createHoliday = async (req, res) => {
             [result.insertId]
         );
 
+        await connection.commit();
+
         return res.status(201).json({
             success: true,
             message:
@@ -157,6 +175,7 @@ const createHoliday = async (req, res) => {
             holiday: rows[0],
         });
     } catch (error) {
+        if (connection) await connection.rollback();
         console.error(
             "CREATE HOLIDAY ERROR:",
             error
@@ -174,6 +193,8 @@ const createHoliday = async (req, res) => {
             success: false,
             message: "Failed to create holiday",
         });
+    } finally {
+        if (connection) connection.release();
     }
 };
 
@@ -182,6 +203,8 @@ const createHoliday = async (req, res) => {
 // SUPER ADMIN ONLY
 // ======================================================
 const updateHoliday = async (req, res) => {
+    let connection;
+
     try {
         const holidayId =
             Number(req.params.id);
@@ -215,18 +238,24 @@ const updateHoliday = async (req, res) => {
             });
         }
 
+        connection = await pool.getConnection();
+        await connection.beginTransaction();
+
         const [holidayRows] =
-            await pool.query(
+            await connection.query(
                 `
-                SELECT id
+                SELECT id,
+                    DATE_FORMAT(holiday_date, '%Y-%m-%d') AS holidayDate,
+                    purpose
                 FROM holidays
                 WHERE id = ?
-                LIMIT 1
+                LIMIT 1 FOR UPDATE
                 `,
                 [holidayId]
             );
 
         if (holidayRows.length === 0) {
+            await connection.rollback();
             return res.status(404).json({
                 success: false,
                 message: "Holiday not found",
@@ -234,7 +263,7 @@ const updateHoliday = async (req, res) => {
         }
 
         const [duplicateRows] =
-            await pool.query(
+            await connection.query(
                 `
                 SELECT id
                 FROM holidays
@@ -249,6 +278,7 @@ const updateHoliday = async (req, res) => {
             );
 
         if (duplicateRows.length > 0) {
+            await connection.rollback();
             return res.status(409).json({
                 success: false,
                 message:
@@ -256,7 +286,7 @@ const updateHoliday = async (req, res) => {
             });
         }
 
-        await pool.query(
+        await connection.query(
             `
             UPDATE holidays
             SET
@@ -271,7 +301,21 @@ const updateHoliday = async (req, res) => {
             ]
         );
 
-        const [rows] = await pool.query(
+        await writeAuditLog(connection, {
+            actorId: req.user.id,
+            action: "HOLIDAY_UPDATED",
+            entityType: "HOLIDAY",
+            entityId: holidayId,
+            oldData: holidayRows[0],
+            newData: {
+                ...holidayRows[0],
+                holidayDate,
+                purpose: String(purpose).trim(),
+            },
+            req,
+        });
+
+        const [rows] = await connection.query(
             `
             SELECT
                 h.id,
@@ -290,6 +334,8 @@ const updateHoliday = async (req, res) => {
             [holidayId]
         );
 
+        await connection.commit();
+
         return res.status(200).json({
             success: true,
             message:
@@ -297,6 +343,7 @@ const updateHoliday = async (req, res) => {
             holiday: rows[0],
         });
     } catch (error) {
+        if (connection) await connection.rollback();
         console.error(
             "UPDATE HOLIDAY ERROR:",
             error
@@ -314,6 +361,8 @@ const updateHoliday = async (req, res) => {
             success: false,
             message: "Failed to update holiday",
         });
+    } finally {
+        if (connection) connection.release();
     }
 };
 
@@ -322,6 +371,8 @@ const updateHoliday = async (req, res) => {
 // SUPER ADMIN ONLY
 // ======================================================
 const deleteHoliday = async (req, res) => {
+    let connection;
+
     try {
         const holidayId =
             Number(req.params.id);
@@ -334,24 +385,30 @@ const deleteHoliday = async (req, res) => {
             });
         }
 
-        const [rows] = await pool.query(
+        connection = await pool.getConnection();
+        await connection.beginTransaction();
+
+        const [rows] = await connection.query(
             `
-            SELECT id
+            SELECT id,
+                DATE_FORMAT(holiday_date, '%Y-%m-%d') AS holidayDate,
+                purpose
             FROM holidays
             WHERE id = ?
-            LIMIT 1
+            LIMIT 1 FOR UPDATE
             `,
             [holidayId]
         );
 
         if (rows.length === 0) {
+            await connection.rollback();
             return res.status(404).json({
                 success: false,
                 message: "Holiday not found",
             });
         }
 
-        await pool.query(
+        await connection.query(
             `
             DELETE FROM holidays
             WHERE id = ?
@@ -359,12 +416,24 @@ const deleteHoliday = async (req, res) => {
             [holidayId]
         );
 
+        await writeAuditLog(connection, {
+            actorId: req.user.id,
+            action: "HOLIDAY_DELETED",
+            entityType: "HOLIDAY",
+            entityId: holidayId,
+            oldData: rows[0],
+            req,
+        });
+
+        await connection.commit();
+
         return res.status(200).json({
             success: true,
             message:
                 "Holiday deleted successfully",
         });
     } catch (error) {
+        if (connection) await connection.rollback();
         console.error(
             "DELETE HOLIDAY ERROR:",
             error
@@ -374,6 +443,8 @@ const deleteHoliday = async (req, res) => {
             success: false,
             message: "Failed to delete holiday",
         });
+    } finally {
+        if (connection) connection.release();
     }
 };
 

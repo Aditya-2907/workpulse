@@ -1,6 +1,17 @@
 const db = require("../config/db");
 const { redactAuditData } = require("../services/auditService");
 
+const parseAuditData = (value) => {
+    if (!value) return null;
+    if (typeof value !== "string") return redactAuditData(value);
+
+    try {
+        return redactAuditData(JSON.parse(value));
+    } catch (_error) {
+        return null;
+    }
+};
+
 const getAuditLogs = async (req, res) => {
     try {
         const page = Math.max(1, Number.parseInt(req.query.page || "1", 10) || 1);
@@ -22,7 +33,7 @@ const getAuditLogs = async (req, res) => {
             [...params, pageSize, offset]
         );
         const [[count]] = await db.query(`SELECT COUNT(*) AS total FROM audit_logs al LEFT JOIN users actor ON actor.id = al.performed_by ${where}`, params);
-        return res.json({ success: true, page, pageSize, total: Number(count.total), logs: rows.map((row) => ({ ...row, oldData: row.oldData ? redactAuditData(typeof row.oldData === "string" ? JSON.parse(row.oldData) : row.oldData) : null, newData: row.newData ? redactAuditData(typeof row.newData === "string" ? JSON.parse(row.newData) : row.newData) : null })) });
+        return res.json({ success: true, page, pageSize, total: Number(count.total), logs: rows.map((row) => ({ ...row, oldData: parseAuditData(row.oldData), newData: parseAuditData(row.newData) })) });
     } catch (_error) {
         return res.status(500).json({ success: false, message: "Unable to load audit logs" });
     }

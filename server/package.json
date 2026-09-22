@@ -13,7 +13,8 @@
     "restore:database:verify": "node scripts/restoreDatabase.js",
     "demo-data:identify": "node scripts/identifyDemoData.js",
     "test:production-features": "node scripts/test-production-features.js",
-    "test:security-middleware": "node scripts/test-security-middleware.js"
+    "test:security-middleware": "node scripts/test-security-middleware.js",
+    "test:employee-import-safety": "node scripts/test-employee-import-safety.js"
   },
   "keywords": [],
   "author": "",

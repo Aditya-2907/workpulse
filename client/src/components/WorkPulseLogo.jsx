@@ -8,18 +8,10 @@ export default function WorkPulseLogo({
     className = "",
     alt = "WorkPulse — People • Work • Progress",
 }) {
-    const [source, setSource] = useState(
-        variant === "mark" ? MARK_LOGO : FULL_LOGO
-    );
+    const source = variant === "mark" ? MARK_LOGO : FULL_LOGO;
     const [failed, setFailed] = useState(false);
 
-    const handleError = () => {
-        if (variant === "mark" && source !== FULL_LOGO) {
-            setSource(FULL_LOGO);
-            return;
-        }
-        setFailed(true);
-    };
+    const handleError = () => setFailed(true);
 
     if (failed) {
         return <span className={`workpulse-logo-fallback ${className}`}>
@@ -29,7 +21,7 @@ export default function WorkPulseLogo({
     }
 
     return <img
-        className={`workpulse-logo-image ${className}`}
+        className={`workpulse-logo-image workpulse-logo-image-${variant} ${className}`}
         src={source}
         alt={alt}
         onError={handleError}

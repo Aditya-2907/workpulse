@@ -1,4 +1,5 @@
 const db = require("../config/db");
+const { writeAuditLog } = require("../services/auditService");
 
 // ======================================================
 // HELPER: Validate YYYY-MM-DD
@@ -227,6 +228,21 @@ const createLeave = async (req, res) => {
                 req.user.id,
             ]
         );
+
+        await writeAuditLog(connection, {
+            actorId: req.user.id,
+            action: "LEAVE_APPROVED",
+            entityType: "LEAVE",
+            entityId: result.insertId,
+            newData: {
+                userId: Number(userId),
+                branchId: targetUser.branch_id,
+                fromDate,
+                toDate,
+                status: "APPROVED",
+            },
+            req,
+        });
 
         await connection.commit();
 
@@ -545,6 +561,28 @@ const cancelLeave = async (req, res) => {
             `,
             [id]
         );
+
+        await writeAuditLog(connection, {
+            actorId: req.user.id,
+            action: "LEAVE_CANCELLED",
+            entityType: "LEAVE",
+            entityId: Number(id),
+            oldData: {
+                userId: leave.user_id,
+                branchId: leave.branch_id,
+                fromDate: leave.from_date,
+                toDate: leave.to_date,
+                status: leave.status,
+            },
+            newData: {
+                userId: leave.user_id,
+                branchId: leave.branch_id,
+                fromDate: leave.from_date,
+                toDate: leave.to_date,
+                status: "CANCELLED",
+            },
+            req,
+        });
 
         await connection.commit();
 

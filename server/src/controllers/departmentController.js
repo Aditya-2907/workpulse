@@ -1,4 +1,5 @@
 const db = require("../config/db");
+const { writeAuditLog } = require("../services/auditService");
 
 const DEPARTMENT_CODE_LOCK =
     "workpulse_department_code_generation";
@@ -78,6 +79,19 @@ const createDepartment = async (req, res) => {
       VALUES (?, ?, 'ACTIVE')`,
             [departmentCode, cleanName]
         );
+
+        await writeAuditLog(connection, {
+            actorId: req.user.id,
+            action: "DEPARTMENT_CREATED",
+            entityType: "DEPARTMENT",
+            entityId: result.insertId,
+            newData: {
+                departmentCode,
+                departmentName: cleanName,
+                status: "ACTIVE",
+            },
+            req,
+        });
 
         await connection.commit();
 
@@ -182,6 +196,8 @@ const getDepartmentById = async (req, res) => {
 };
 
 const updateDepartment = async (req, res) => {
+    let connection;
+
     try {
         const { id } = req.params;
         const { departmentName } = req.body;
@@ -195,22 +211,26 @@ const updateDepartment = async (req, res) => {
 
         const cleanName = departmentName.trim();
 
-        const [current] = await db.query(
-            `SELECT id
+        connection = await db.getConnection();
+        await connection.beginTransaction();
+
+        const [current] = await connection.query(
+            `SELECT id, department_code AS departmentCode, department_name AS departmentName, status
        FROM departments
        WHERE id = ?
-       LIMIT 1`,
+       LIMIT 1 FOR UPDATE`,
             [id]
         );
 
         if (current.length === 0) {
+            await connection.rollback();
             return res.status(404).json({
                 success: false,
                 message: "Department not found",
             });
         }
 
-        const [duplicate] = await db.query(
+        const [duplicate] = await connection.query(
             `SELECT id
        FROM departments
        WHERE department_name = ?
@@ -220,34 +240,52 @@ const updateDepartment = async (req, res) => {
         );
 
         if (duplicate.length > 0) {
+            await connection.rollback();
             return res.status(409).json({
                 success: false,
                 message: "Department already exists",
             });
         }
 
-        await db.query(
+        await connection.query(
             `UPDATE departments
        SET department_name = ?
        WHERE id = ?`,
             [cleanName, id]
         );
 
+        await writeAuditLog(connection, {
+            actorId: req.user.id,
+            action: "DEPARTMENT_UPDATED",
+            entityType: "DEPARTMENT",
+            entityId: Number(id),
+            oldData: current[0],
+            newData: { ...current[0], departmentName: cleanName },
+            req,
+        });
+
+        await connection.commit();
+
         return res.status(200).json({
             success: true,
             message: "Department updated successfully",
         });
     } catch (error) {
+        if (connection) await connection.rollback();
         console.error("Update department error:", error);
 
         return res.status(500).json({
             success: false,
             message: "Internal server error",
         });
+    } finally {
+        if (connection) connection.release();
     }
 };
 
 const updateDepartmentStatus = async (req, res) => {
+    let connection;
+
     try {
         const { id } = req.params;
         const { status } = req.body;
@@ -259,39 +297,58 @@ const updateDepartmentStatus = async (req, res) => {
             });
         }
 
-        const [departments] = await db.query(
-            `SELECT id
+        connection = await db.getConnection();
+        await connection.beginTransaction();
+
+        const [departments] = await connection.query(
+            `SELECT id, department_code AS departmentCode, department_name AS departmentName, status
        FROM departments
        WHERE id = ?
-       LIMIT 1`,
+       LIMIT 1 FOR UPDATE`,
             [id]
         );
 
         if (departments.length === 0) {
+            await connection.rollback();
             return res.status(404).json({
                 success: false,
                 message: "Department not found",
             });
         }
 
-        await db.query(
+        await connection.query(
             `UPDATE departments
        SET status = ?
        WHERE id = ?`,
             [status, id]
         );
 
+        await writeAuditLog(connection, {
+            actorId: req.user.id,
+            action: "DEPARTMENT_STATUS_CHANGED",
+            entityType: "DEPARTMENT",
+            entityId: Number(id),
+            oldData: departments[0],
+            newData: { ...departments[0], status },
+            req,
+        });
+
+        await connection.commit();
+
         return res.status(200).json({
             success: true,
             message: `Department marked as ${status}`,
         });
     } catch (error) {
+        if (connection) await connection.rollback();
         console.error("Update department status error:", error);
 
         return res.status(500).json({
             success: false,
             message: "Internal server error",
         });
+    } finally {
+        if (connection) connection.release();
     }
 };
 

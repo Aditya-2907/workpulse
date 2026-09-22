@@ -238,6 +238,21 @@ const createEmployee = async (req, res) => {
             ]
         );
 
+        await writeAuditLog(connection, {
+            actorId: req.user.id,
+            action: "EMPLOYEE_CREATED",
+            entityType: "USER",
+            entityId: result.insertId,
+            newData: {
+                employeeCode,
+                branchId: finalBranchId,
+                departmentId,
+                designation: designation.trim(),
+                accountStatus: "ACTIVE",
+            },
+            req,
+        });
+
         await connection.commit();
 
         return res.status(201).json({
@@ -979,48 +994,25 @@ const transferEmployeeBranch = async (
             ]
         );
 
-        await connection.query(
-            `INSERT INTO audit_logs (
-                performed_by,
-                action,
-                entity_type,
-                entity_id,
-                old_data,
-                new_data,
-                ip_address,
-                user_agent
-            )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-            [
-                req.user.id,
-                "EMPLOYEE_BRANCH_TRANSFER",
-                "EMPLOYEE",
-                employee.id,
-                JSON.stringify({
-                    employeeCode: employee.employeeCode,
-                    fullName: employee.fullName,
-                    branchId: employee.branchId,
-                    branchCode: employee.previousBranchCode,
-                    branchName: employee.previousBranchName,
-                }),
-                JSON.stringify({
-                    employeeCode: employee.employeeCode,
-                    fullName: employee.fullName,
-                    branchId: destinationBranch.id,
-                    branchCode: destinationBranch.branchCode,
-                    branchName: destinationBranch.branchName,
-                }),
-                req.ip || null,
-                req.get("user-agent") || null,
-            ]
-        );
-
         await writeAuditLog(connection, {
             actorId: req.user.id,
-            action: "EMPLOYEE_CREATED",
-            entityType: "USER",
-            entityId: result.insertId,
-            newData: { employeeCode, branchId: finalBranchId, departmentId, designation: designation.trim() },
+            action: "EMPLOYEE_BRANCH_TRANSFER",
+            entityType: "EMPLOYEE",
+            entityId: employee.id,
+            oldData: {
+                employeeCode: employee.employeeCode,
+                fullName: employee.fullName,
+                branchId: employee.branchId,
+                branchCode: employee.previousBranchCode,
+                branchName: employee.previousBranchName,
+            },
+            newData: {
+                employeeCode: employee.employeeCode,
+                fullName: employee.fullName,
+                branchId: destinationBranch.id,
+                branchCode: destinationBranch.branchCode,
+                branchName: destinationBranch.branchName,
+            },
             req,
         });
 
