@@ -61,7 +61,13 @@ const previewImport = async (req, res) => {
         if (uniquePhones.length || uniqueEmails.length || uniqueAadhaars.length) { const [existing] = await db.query(`SELECT phone, email, aadhaar_number AS aadhaarNumber FROM users WHERE phone IN (${uniquePhones.map(() => "?").join(",") || "NULL"}) OR email IN (${uniqueEmails.map(() => "?").join(",") || "NULL"}) OR aadhaar_number IN (${uniqueAadhaars.map(() => "?").join(",") || "NULL"})`, [...uniquePhones, ...uniqueEmails, ...uniqueAadhaars]); const existingPhones = new Set(existing.map((item) => item.phone)); const existingEmails = new Set(existing.map((item) => String(item.email || "").toLowerCase())); const existingAadhaar = new Set(existing.map((item) => item.aadhaarNumber)); sourceRows.forEach((item) => { if (existingPhones.has(item.raw.Phone)) item.errors.push("Phone already exists"); if (item.raw.Email && existingEmails.has(item.raw.Email.toLowerCase())) item.errors.push("Email already exists"); if (existingAadhaar.has(item.raw.Aadhaar)) item.errors.push("Aadhaar already exists"); }); }
         const validRows = sourceRows.filter((item) => !item.errors.length); const canImport = sourceRows.length > 0 && validRows.length === sourceRows.length; const token = crypto.randomBytes(24).toString("base64url"); previews.set(token, { expiresAt: Date.now() + 15 * 60 * 1000, canImport, rows: validRows.map((item) => ({ ...item.raw, dateOfBirth: item.raw.DOB || null, branchId: branchMap.get(item.raw["Branch Code"].toUpperCase()), departmentId: departmentMap.get(item.raw["Department Code"].toUpperCase()) })) });
         return res.json({ success: true, previewToken: token, validRows: validRows.map((item) => ({ row: item.rowIndex, name: item.raw.Name, phone: item.raw.Phone, email: item.raw.Email, branchCode: item.raw["Branch Code"], departmentCode: item.raw["Department Code"], aadhaar: mask(item.raw.Aadhaar), pan: mask(item.raw.PAN) })), invalidRows: sourceRows.filter((item) => item.errors.length).map((item) => ({ row: item.rowIndex, name: item.raw.Name, errors: item.errors })), canImport });
-    } catch (_error) { return res.status(400).json({ success: false, message: "Unable to parse the employee import workbook." }); }
+    } catch (error) {
+        console.error("EMPLOYEE IMPORT PREVIEW ERROR:", error);
+        return res.status(400).json({
+            success: false,
+            message: "Unable to parse the employee import workbook."
+        });
+    }
 };
 
 const confirmImport = async (req, res) => {
