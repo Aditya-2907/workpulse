@@ -65,9 +65,7 @@ const previewImport = async (req, res) => {
         console.error("EMPLOYEE IMPORT PREVIEW ERROR:", error);
         return res.status(400).json({
             success: false,
-            message: "Unable to parse the employee import workbook.",
-            debugError: error.message,
-            debugCode: error.code || null
+            message: "Unable to parse the employee import workbook."
         });
     }
 };
