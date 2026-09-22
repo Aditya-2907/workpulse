@@ -88,7 +88,7 @@ function AdminDashboard() {
             {!loading && !error && (
                 <>
                     {branch && (
-                        <section className="dashboard-panel">
+                        <section className="dashboard-panel admin-dashboard-branch-info">
                             <div className="dashboard-panel-header">
                                 <div>
                                     <h3>{branch.name}</h3>

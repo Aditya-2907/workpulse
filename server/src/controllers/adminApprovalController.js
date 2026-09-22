@@ -301,6 +301,9 @@ const getAdminApprovalRequests =
                         u.phone,
                         u.email,
                         u.designation,
+                        u.qualification,
+                        u.computer_skill
+                            AS computerSkill,
                         u.account_status
                             AS accountStatus,
                         u.duty_start_time
@@ -408,6 +411,10 @@ const reviewAdminApprovalRequest =
                 branchId,
                 departmentId,
                 designation,
+                qualification,
+                dutyStartTime,
+                dutyEndTime,
+                computerSkill,
                 joiningDate,
             } = req.body;
 
@@ -441,12 +448,26 @@ const reviewAdminApprovalRequest =
 
             if (
                 action === "APPROVE" &&
-                (!branchId || !departmentId || !designation?.trim() || !joiningDate)
+                (!branchId || !departmentId || !designation?.trim() || !qualification?.trim() || !dutyStartTime || !dutyEndTime || typeof computerSkill !== "boolean" || !joiningDate)
             ) {
                 await connection.rollback();
                 return res.status(400).json({
                     success: false,
-                    message: "Branch, department, designation and joining date are required to approve this request",
+                    message: "Branch, department, designation, qualification, duty times, computer skills and joining date are required to approve this request",
+                });
+            }
+
+            if (
+                action === "APPROVE" &&
+                (!/^([01]\d|2[0-3]):[0-5]\d$/.test(dutyStartTime) ||
+                    !/^([01]\d|2[0-3]):[0-5]\d$/.test(dutyEndTime) ||
+                    dutyStartTime >= dutyEndTime ||
+                    qualification.trim().length > 255)
+            ) {
+                await connection.rollback();
+                return res.status(400).json({
+                    success: false,
+                    message: "Use a qualification up to 255 characters and valid duty times with an end time after the start time",
                 });
             }
 
@@ -640,6 +661,26 @@ const reviewAdminApprovalRequest =
                         ELSE designation
                     END,
 
+                    qualification = CASE
+                        WHEN ? = 'APPROVE' THEN ?
+                        ELSE qualification
+                    END,
+
+                    computer_skill = CASE
+                        WHEN ? = 'APPROVE' THEN ?
+                        ELSE computer_skill
+                    END,
+
+                    duty_start_time = CASE
+                        WHEN ? = 'APPROVE' THEN ?
+                        ELSE duty_start_time
+                    END,
+
+                    duty_end_time = CASE
+                        WHEN ? = 'APPROVE' THEN ?
+                        ELSE duty_end_time
+                    END,
+
                     joining_date = CASE
                         WHEN ? = 'APPROVE' THEN ?
                         ELSE joining_date
@@ -667,6 +708,14 @@ const reviewAdminApprovalRequest =
                     action,
                     designation?.trim() || null,
                     action,
+                    qualification?.trim() || null,
+                    action,
+                    computerSkill,
+                    action,
+                    dutyStartTime || null,
+                    action,
+                    dutyEndTime || null,
+                    action,
                     joiningDate || null,
                     userStatus,
                     request.admin_user_id,
@@ -680,10 +729,21 @@ const reviewAdminApprovalRequest =
                 entityId: id,
                 oldData: { status: "PENDING" },
                 newData: action === "APPROVE"
-                    ? { status: requestStatus, candidateUserId: request.admin_user_id, branchId, departmentId, mustChangePassword: true }
+                    ? { status: requestStatus, candidateUserId: request.admin_user_id, branchId, departmentId, qualification: qualification.trim(), dutyStartTime, dutyEndTime, computerSkill, mustChangePassword: true }
                     : { status: requestStatus, candidateUserId: request.admin_user_id },
                 req,
             });
+
+            let admin = null;
+            if (action === "APPROVE") {
+                [[admin]] = await connection.query(
+                    `SELECT id, employee_code AS employeeCode, full_name AS fullName,
+                            qualification, computer_skill AS computerSkill,
+                            duty_start_time AS dutyStartTime, duty_end_time AS dutyEndTime
+                     FROM users WHERE id = ?`,
+                    [request.admin_user_id]
+                );
+            }
 
             await connection.commit();
 
@@ -697,6 +757,8 @@ const reviewAdminApprovalRequest =
                             "APPROVE"
                             ? "Admin request approved successfully"
                             : "Admin request rejected successfully",
+
+                    admin,
                 });
         } catch (error) {
             await connection.rollback();

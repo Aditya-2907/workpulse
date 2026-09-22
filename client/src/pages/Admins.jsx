@@ -39,6 +39,10 @@ const initialApprovalAssignment = {
     branchId: "",
     departmentId: "",
     designation: "",
+    qualification: "",
+    dutyStartTime: "",
+    dutyEndTime: "",
+    computerSkill: "",
     joiningDate: "",
     temporaryPassword: "",
 };
@@ -407,6 +411,10 @@ const Admins = () => {
                 branchId: request.branchId ? String(request.branchId) : "",
                 departmentId: request.departmentId ? String(request.departmentId) : "",
                 designation: request.designation || "",
+                qualification: request.qualification || "",
+                dutyStartTime: request.dutyStartTime ? String(request.dutyStartTime).slice(0, 5) : "",
+                dutyEndTime: request.dutyEndTime ? String(request.dutyEndTime).slice(0, 5) : "",
+                computerSkill: request.computerSkill ? "true" : "",
                 joiningDate: request.joiningDate ? String(request.joiningDate).slice(0, 10) : "",
                 temporaryPassword: "",
             });
@@ -434,16 +442,20 @@ const Admins = () => {
     };
 
     const handleApprovalAssignmentChange = (event) => {
-        const { name, value } = event.target;
-        setApprovalAssignment((current) => ({ ...current, [name]: value }));
+        const { name, value, type, checked } = event.target;
+        setApprovalAssignment((current) => ({ ...current, [name]: type === "checkbox" ? checked : value }));
     };
 
     const submitApproval = async (event) => {
         event.preventDefault();
         setApprovalError("");
         if (!approvalTarget) return;
-        if (!approvalAssignment.branchId || !approvalAssignment.departmentId || !approvalAssignment.designation.trim() || !approvalAssignment.joiningDate) {
-            setApprovalError("Branch, department, designation and joining date are required.");
+        if (!approvalAssignment.branchId || !approvalAssignment.departmentId || !approvalAssignment.designation.trim() || !approvalAssignment.qualification.trim() || !approvalAssignment.dutyStartTime || !approvalAssignment.dutyEndTime || !approvalAssignment.joiningDate || !["true", "false"].includes(approvalAssignment.computerSkill)) {
+            setApprovalError("Branch, department, designation, qualification, duty times, computer skills and joining date are required.");
+            return;
+        }
+        if (approvalAssignment.dutyStartTime >= approvalAssignment.dutyEndTime) {
+            setApprovalError("Duty end time must be after duty start time.");
             return;
         }
         if (approvalAssignment.temporaryPassword.length < 8) {
@@ -461,6 +473,10 @@ const Admins = () => {
                     branchId: Number(approvalAssignment.branchId),
                     departmentId: Number(approvalAssignment.departmentId),
                     designation: approvalAssignment.designation.trim(),
+                    qualification: approvalAssignment.qualification.trim(),
+                    dutyStartTime: approvalAssignment.dutyStartTime,
+                    dutyEndTime: approvalAssignment.dutyEndTime,
+                    computerSkill: approvalAssignment.computerSkill === "true",
                     joiningDate: approvalAssignment.joiningDate,
                 }
             );
@@ -1114,6 +1130,10 @@ const Admins = () => {
                             <label>Branch *<select name="branchId" value={approvalAssignment.branchId} onChange={handleApprovalAssignmentChange} required><option value="">Select branch</option>{branches.map((branch) => <option key={branch.id} value={branch.id}>{branch.branchName}</option>)}</select></label>
                             <label>Department *<select name="departmentId" value={approvalAssignment.departmentId} onChange={handleApprovalAssignmentChange} required><option value="">Select department</option>{departments.map((department) => <option key={department.id} value={department.id}>{department.departmentName}</option>)}</select></label>
                             <label>Designation *<input name="designation" value={approvalAssignment.designation} onChange={handleApprovalAssignmentChange} required /></label>
+                            <label>Qualification *<input name="qualification" value={approvalAssignment.qualification} onChange={handleApprovalAssignmentChange} required /></label>
+                            <label>Duty Start Time *<input type="time" name="dutyStartTime" value={approvalAssignment.dutyStartTime} onChange={handleApprovalAssignmentChange} required /></label>
+                            <label>Duty End Time *<input type="time" name="dutyEndTime" value={approvalAssignment.dutyEndTime} onChange={handleApprovalAssignmentChange} required /></label>
+                            <label>Has Computer Skills *<select name="computerSkill" value={approvalAssignment.computerSkill} onChange={handleApprovalAssignmentChange} required><option value="">Select an option</option><option value="true">Yes</option><option value="false">No</option></select></label>
                             <label>Joining Date *<input type="date" name="joiningDate" value={approvalAssignment.joiningDate} onChange={handleApprovalAssignmentChange} required /></label>
                             <label>Temporary Password *<input type="password" name="temporaryPassword" value={approvalAssignment.temporaryPassword} onChange={handleApprovalAssignmentChange} autoComplete="new-password" minLength="8" required /></label>
                             {approvalError && <p className="management-form-error" role="alert">{approvalError}</p>}

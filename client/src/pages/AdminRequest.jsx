@@ -24,14 +24,14 @@ const AdminRequest = () => {
         setSuccess("");
         try {
             setSaving(true);
-            const response = await requestAdminCreation({
+            await requestAdminCreation({
                 fullName: formData.fullName.trim(), phone: formData.phone.trim(),
                 email: formData.email.trim() || null, dateOfBirth: formData.dateOfBirth || null,
                 gender: formData.gender || null, address: formData.address.trim() || null,
                 pincode: formData.pincode.trim() || null,
                 aadhaarNumber: formData.aadhaarNumber.trim(), panNumber: formData.panNumber.trim() || null,
             });
-            setSuccess(response.message || "Admin access request submitted.");
+            setSuccess("Admin request submitted successfully. It is now pending Super Admin approval.");
             setFormData(initialForm);
         } catch (requestError) {
             setError(requestError.message || "Unable to submit the request.");
@@ -52,7 +52,7 @@ const AdminRequest = () => {
             <section className="dashboard-panel">
                 <div className="dashboard-panel-header"><div><h3>Candidate information</h3><p>This form does not assign a role, branch, department, designation, joining date, approval status, or password.</p></div></div>
                 {error && <p className="management-form-error" role="alert">{error}</p>}
-                {success && <p className="management-form-success" role="status">{success}</p>}
+                {success && <p className="management-success-message" role="status">{success}</p>}
                 <form className="management-form-grid" onSubmit={handleSubmit}>
                     <div className="management-form-group"><label htmlFor="request-admin-name">Full Name *</label><input id="request-admin-name" name="fullName" value={formData.fullName} onChange={handleChange} required /></div>
                     <div className="management-form-group"><label htmlFor="request-admin-phone">Phone *</label><input id="request-admin-phone" name="phone" value={formData.phone} onChange={handleChange} inputMode="tel" required /></div>
