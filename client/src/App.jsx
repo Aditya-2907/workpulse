@@ -23,6 +23,8 @@ import Holidays from "./pages/Holidays";
 import Reports from "./pages/Reports";
 import Profile from "./pages/Profile";
 import ForcePasswordChange from "./pages/ForcePasswordChange";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import AlertCenter from "./pages/AlertCenter";
 import AuditLogs from "./pages/AuditLogs";
 import OrganizationSettings from "./pages/OrganizationSettings";
@@ -31,6 +33,8 @@ import EmployeeImport from "./pages/EmployeeImport";
 const PAGE_TITLES = {
   "/": "Login",
   "/management/login": "Login",
+  "/forgot-password": "Forgot Password",
+  "/reset-password": "Reset Password",
   "/management/force-password-change": "Change Password",
   "/super-admin/dashboard": "Dashboard",
   "/admin/dashboard": "Dashboard",
@@ -82,6 +86,9 @@ function App() {
           path="/management/login"
           element={<ManagementLogin />}
         />
+
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
 
         <Route
           path="/management/force-password-change"

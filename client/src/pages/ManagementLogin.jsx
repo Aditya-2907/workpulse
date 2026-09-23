@@ -85,6 +85,7 @@ function ManagementLogin() {
                     {error && <div className="management-login-error" role="alert">{error}</div>}
                     <button type="submit" className="management-login-submit" disabled={loading}>{loading ? "Signing in…" : "Sign in"}<span aria-hidden="true">→</span></button>
                 </form>
+                <button type="button" className="management-login-link" onClick={() => navigate("/forgot-password")}>Forgot password?</button>
                 <div className="management-login-footer"><span>Need to mark attendance instead?</span><button type="button" onClick={() => navigate("/")}>Go to attendance</button></div>
             </section>
         </section>

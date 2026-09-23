@@ -1,5 +1,3 @@
-USE workpulse;
-
 -- =========================================================
 -- 1. BRANCHES
 -- =========================================================
@@ -169,6 +167,8 @@ CREATE TABLE IF NOT EXISTS attendance_records (
 
     check_in_photo_path VARCHAR(500) NULL,
 
+    check_in_photo_public_id VARCHAR(500) NULL,
+
     check_in_latitude DECIMAL(10, 8) NULL,
 
     check_in_longitude DECIMAL(11, 8) NULL,
@@ -185,6 +185,8 @@ CREATE TABLE IF NOT EXISTS attendance_records (
     check_out_time DATETIME NULL,
 
     check_out_photo_path VARCHAR(500) NULL,
+
+    check_out_photo_public_id VARCHAR(500) NULL,
 
     check_out_latitude DECIMAL(10, 8) NULL,
 
@@ -435,7 +437,53 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 );
 
 -- =========================================================
--- 9. ORGANIZATION SETTINGS
+-- 9. BRANCH WEEKLY OFFS
+-- =========================================================
+
+CREATE TABLE IF NOT EXISTS branch_weekly_offs (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    branch_id BIGINT UNSIGNED NOT NULL,
+    weekday ENUM(
+        'MONDAY',
+        'TUESDAY',
+        'WEDNESDAY',
+        'THURSDAY',
+        'FRIDAY',
+        'SATURDAY',
+        'SUNDAY'
+    ) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_branch_weekly_offs_branch
+        FOREIGN KEY (branch_id)
+        REFERENCES branches(id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+    UNIQUE KEY uq_branch_weekly_offs_day (branch_id, weekday)
+);
+
+-- =========================================================
+-- 10. PASSWORD RESET TOKENS
+-- =========================================================
+
+CREATE TABLE IF NOT EXISTS password_reset_tokens (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT UNSIGNED NOT NULL,
+    token_hash CHAR(64) NOT NULL UNIQUE,
+    expires_at DATETIME NOT NULL,
+    consumed_at DATETIME NULL,
+    requested_ip VARCHAR(45) NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_password_reset_tokens_user
+        FOREIGN KEY (user_id)
+        REFERENCES users(id)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE,
+    INDEX idx_password_reset_tokens_lookup (token_hash, expires_at, consumed_at),
+    INDEX idx_password_reset_tokens_user (user_id, created_at)
+);
+
+-- =========================================================
+-- 11. ORGANIZATION SETTINGS
 -- Single-row operational settings; historical attendance is never rewritten.
 -- =========================================================
 
@@ -457,7 +505,7 @@ CREATE TABLE IF NOT EXISTS organization_settings (
 );
 
 -- =========================================================
--- 10. ATTENDANCE CORRECTION HISTORY AND OPTIONAL DEVICES
+-- 12. ATTENDANCE CORRECTION HISTORY AND OPTIONAL DEVICES
 -- =========================================================
 
 CREATE TABLE IF NOT EXISTS attendance_corrections (
@@ -472,7 +520,8 @@ CREATE TABLE IF NOT EXISTS attendance_corrections (
         REFERENCES attendance_records(id) ON DELETE RESTRICT,
     CONSTRAINT fk_attendance_correction_actor FOREIGN KEY (corrected_by)
         REFERENCES users(id) ON DELETE RESTRICT,
-    INDEX idx_attendance_correction_record (attendance_record_id)
+    INDEX idx_attendance_correction_record (attendance_record_id),
+    INDEX idx_attendance_correction_created_at (created_at)
 );
 
 CREATE TABLE IF NOT EXISTS attendance_devices (

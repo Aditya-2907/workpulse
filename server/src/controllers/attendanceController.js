@@ -1,28 +1,10 @@
 const jwt = require("jsonwebtoken");
-const fs = require("fs/promises");
 const db = require("../config/db");
 
 const {
     uploadAttendancePhoto,
     deleteAttendancePhoto,
 } = require("../services/attendancePhotoService");
-
-const removeLocalAttendancePhoto = async (filePath) => {
-    if (!filePath) {
-        return;
-    }
-
-    try {
-        await fs.unlink(filePath);
-    } catch (error) {
-        if (error.code !== "ENOENT") {
-            console.error(
-                "Failed to remove temporary attendance photo:",
-                error
-            );
-        }
-    }
-};
 
 const attendanceLogin = async (req, res) => {
     try {
@@ -621,12 +603,8 @@ const checkIn = async (req, res) => {
 
         let uploadedPhoto = null;
 
-        try {
-            uploadedPhoto =
-                await uploadAttendancePhoto(req.file.path);
-        } finally {
-            await removeLocalAttendancePhoto(req.file.path);
-        }
+        uploadedPhoto =
+            await uploadAttendancePhoto(req.file.buffer);
 
         const photoPath = uploadedPhoto.url;
         const photoPublicId = uploadedPhoto.publicId;
@@ -721,10 +699,6 @@ const checkIn = async (req, res) => {
             success: false,
             message: "Internal server error",
         });
-    } finally {
-        if (req.file?.path) {
-            await removeLocalAttendancePhoto(req.file.path);
-        }
     }
 };
 
@@ -941,12 +915,8 @@ const checkOut = async (req, res) => {
 
         let uploadedPhoto = null;
 
-        try {
-            uploadedPhoto =
-                await uploadAttendancePhoto(req.file.path);
-        } finally {
-            await removeLocalAttendancePhoto(req.file.path);
-        }
+        uploadedPhoto =
+            await uploadAttendancePhoto(req.file.buffer);
 
         const photoPath = uploadedPhoto.url;
         const photoPublicId = uploadedPhoto.publicId;
@@ -1017,10 +987,6 @@ const checkOut = async (req, res) => {
             success: false,
             message: "Internal server error",
         });
-    } finally {
-        if (req.file?.path) {
-            await removeLocalAttendancePhoto(req.file.path);
-        }
     }
 };
 

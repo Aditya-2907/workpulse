@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
 const crypto = require("crypto");
+const multer = require("multer");
 
 const authRoutes = require("./routes/authRoutes");
 const branchRoutes = require("./routes/branchRoutes");
@@ -121,6 +122,16 @@ app.use((req, res) => res.status(404).json({ success: false, message: "API route
 app.use((error, req, res, _next) => {
     const requestId = req.requestId;
     console.error("API error", { requestId, method: req.method, path: req.path, message: error.message });
+    if (error instanceof multer.MulterError) {
+        const status = error.code === "LIMIT_FILE_SIZE" ? 413 : 400;
+        const message = error.code === "LIMIT_FILE_SIZE"
+            ? "Uploaded file is too large."
+            : "Invalid file upload.";
+        return res.status(status).json({ success: false, message, requestId });
+    }
+    if (error.message === "Only image files are allowed") {
+        return res.status(400).json({ success: false, message: "Only JPEG, PNG, or WebP images are allowed.", requestId });
+    }
     res.status(error.status || 500).json({ success: false, message: "Internal server error", requestId });
 });
 

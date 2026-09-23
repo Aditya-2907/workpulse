@@ -2,15 +2,25 @@ const cloudinary = require("../config/cloudinary");
 
 const ATTENDANCE_FOLDER = "workpulse/attendance";
 
-const uploadAttendancePhoto = async (filePath) => {
-    if (!filePath) {
-        throw new Error("Attendance photo file path is required");
+const uploadAttendancePhoto = async (fileBuffer) => {
+    if (!Buffer.isBuffer(fileBuffer) || fileBuffer.length === 0) {
+        throw new Error("Attendance photo data is required");
     }
 
-    const result = await cloudinary.uploader.upload(filePath, {
-        folder: ATTENDANCE_FOLDER,
-        resource_type: "image",
-        type: "authenticated",
+    const result = await new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream({
+            folder: ATTENDANCE_FOLDER,
+            resource_type: "image",
+            type: "authenticated",
+        }, (error, uploadResult) => {
+            if (error) {
+                reject(error);
+                return;
+            }
+            resolve(uploadResult);
+        });
+
+        stream.end(fileBuffer);
     });
 
     return {

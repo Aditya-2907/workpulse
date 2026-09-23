@@ -42,16 +42,28 @@ BACKUP_RETENTION_DAYS=30
 
 ## Database creation and migrations
 
-1. Provision a database and least-privilege application user. Configure `+05:30` session handling through the application; do not change historical attendance timestamps.
-2. Take and verify a backup before every migration:
+1. Provision an empty database and least-privilege application user. Configure `+05:30` session handling through the application; do not change historical attendance timestamps.
+2. For a **new empty database**, load the complete portable schema once. It no longer selects a hard-coded database, so connect the MySQL client to the intended database explicitly:
+
+   ```bash
+   mysql --host="$DB_HOST" --port="$DB_PORT" --user="$DB_USER" --password "$DB_NAME" < database/schema.sql
+   ```
+
+   Do **not** run the historical additive migrations after this fresh schema load; `database/schema.sql` already includes their current structures.
+3. For an **existing installation**, inspect the target schema and use only the applicable reviewed additive migration/helper. Never rerun a prior migration blindly. Take and verify a backup first:
 
    ```bash
    cd server
    npm run backup:database
    ```
 
-3. Apply existing migrations in their documented order. Do not rerun prior migrations blindly.
-4. Apply the additive operations migration once:
+   Then apply the idempotent fresh-schema completion helper before any other applicable reviewed helper:
+
+   ```bash
+   npm run migration:schema-completion
+   ```
+
+4. Apply the additive operations migration once when its tables/settings columns are absent:
 
    ```bash
    node scripts/apply-production-operations-migration.js

@@ -9,10 +9,16 @@ const requireValue = (name) => {
 };
 
 if (process.env.NODE_ENV !== "production") failures.push("NODE_ENV must be production");
-["DB_HOST", "DB_USER", "DB_NAME", "JWT_SECRET", "FRONTEND_URL", "CLOUDINARY_CLOUD_NAME", "CLOUDINARY_API_KEY", "CLOUDINARY_API_SECRET"].forEach(requireValue);
+["DB_HOST", "DB_USER", "DB_PASSWORD", "DB_NAME", "JWT_SECRET", "FRONTEND_URL", "CLOUDINARY_CLOUD_NAME", "CLOUDINARY_API_KEY", "CLOUDINARY_API_SECRET", "MAIL_HOST", "MAIL_FROM"].forEach(requireValue);
 if (String(process.env.JWT_SECRET || "").length < 32) failures.push("JWT_SECRET must be at least 32 characters");
-if (/localhost|127\.0\.0\.1/i.test(process.env.FRONTEND_URL || "")) failures.push("FRONTEND_URL must not use localhost in production");
-if (!process.env.MAIL_HOST || !process.env.MAIL_FROM) warnings.push("SMTP is incomplete; forgot-password email is not production-ready");
+const configuredOrigins = String(process.env.FRONTEND_URL || "").split(",").map((value) => value.trim()).filter(Boolean);
+if (!configuredOrigins.length || configuredOrigins.some((value) => {
+    try {
+        return new URL(value).protocol !== "https:";
+    } catch {
+        return true;
+    }
+})) failures.push("FRONTEND_URL must contain only valid HTTPS frontend origins in production");
 const retentionDays = Number.parseInt(process.env.ATTENDANCE_PHOTO_RETENTION_DAYS || "90", 10);
 if (!Number.isInteger(retentionDays) || retentionDays < 1) failures.push("ATTENDANCE_PHOTO_RETENTION_DAYS must be a positive integer");
 const proxyHops = Number.parseInt(process.env.TRUST_PROXY_HOPS || "0", 10);

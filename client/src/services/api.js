@@ -253,6 +253,28 @@ export const forceManagementPasswordChange = async (passwordData) => {
     return data;
 };
 
+export const requestManagementPasswordReset = async (email) => {
+    const response = await fetch(`${API_BASE_URL}/auth/management/forgot-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.message || "Unable to request a password reset.");
+    return data;
+};
+
+export const resetManagementPassword = async (passwordData) => {
+    const response = await fetch(`${API_BASE_URL}/auth/management/reset-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(passwordData),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.message || "Unable to reset password.");
+    return data;
+};
+
 export const getDashboardDrilldown = async (type) => {
     const token = sessionStorage.getItem("managementToken");
     const response = await fetch(
